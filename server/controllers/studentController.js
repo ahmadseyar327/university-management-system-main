@@ -7,7 +7,10 @@ const registeredCourseSchema = require("../models/registeredCourseModel");
 
 const registerStudent = async (req, res) => {
   try {
-    const { fname, lname, email, password } = req.body;
+    const fname = typeof req.body.fname === "string" ? req.body.fname.trim() : "";
+    const lname = typeof req.body.lname === "string" ? req.body.lname.trim() : "";
+    const email = typeof req.body.email === "string" ? req.body.email.trim() : "";
+    const password = req.body.password;
 
     // validation
     switch (true) {
@@ -26,7 +29,7 @@ const registerStudent = async (req, res) => {
           success: false,
           message: "Email is mandatory!",
         });
-      case !password:
+      case password == null || password === "":
         return res.status(400).send({
           success: false,
           message: "Password is mandatory!",
@@ -141,11 +144,18 @@ const getSingleStudent = async (req, res) => {
 
 const loginStudent = async (req, res) => {
   try {
-    const { email, rollNumber, password } = req.body;
+    const { email: rawEmail, rollNumber: rawRoll, password } = req.body;
+    const email =
+      typeof rawEmail === "string" ? rawEmail.trim() : rawEmail || "";
+    let rollNumber = rawRoll;
+    if (rollNumber != null && rollNumber !== "") {
+      const n = Number(rollNumber);
+      rollNumber = Number.isNaN(n) ? rollNumber : n;
+    }
 
     // validation
     switch (true) {
-      case !email && !rollNumber:
+      case !email && (rollNumber == null || rollNumber === ""):
         return res.status(400).send({
           success: false,
           message: "Please provide Email or Roll number.",
@@ -159,12 +169,19 @@ const loginStudent = async (req, res) => {
         break;
     }
 
-    const student = await studentSchema.findOne({
-      $or: [
-        { email, password },
-        { rollNumber, password },
-      ],
-    });
+    const orConditions = [];
+    if (email) orConditions.push({ email, password });
+    if (rollNumber != null && rollNumber !== "") {
+      orConditions.push({ rollNumber, password });
+    }
+    if (!orConditions.length) {
+      return res.status(400).send({
+        success: false,
+        message: "Please provide Email or Roll number.",
+      });
+    }
+
+    const student = await studentSchema.findOne({ $or: orConditions });
 
     if (student) {
       res.status(200).send({
@@ -173,7 +190,8 @@ const loginStudent = async (req, res) => {
         data: student,
       });
     } else {
-      res.status(404).send({
+      // 401: wrong credentials (404 looked like "route not found" in browsers)
+      res.status(401).send({
         success: false,
         message: "Wrong credentials.",
       });

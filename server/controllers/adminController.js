@@ -2,7 +2,10 @@ const adminSchema = require("../models/adminModel");
 
 const registerAdmin = async (req, res) => {
   try {
-    const { fname, lname, email, password } = req.body;
+    const fname = typeof req.body.fname === "string" ? req.body.fname.trim() : "";
+    const lname = typeof req.body.lname === "string" ? req.body.lname.trim() : "";
+    const email = typeof req.body.email === "string" ? req.body.email.trim() : "";
+    const password = req.body.password;
 
     // validation
     switch (true) {
@@ -21,7 +24,7 @@ const registerAdmin = async (req, res) => {
           success: false,
           message: "Email is mandatory!",
         });
-      case !password:
+      case password == null || password === "":
         return res.status(400).send({
           success: false,
           message: "Password is mandatory!",
