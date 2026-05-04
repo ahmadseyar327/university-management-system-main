@@ -15,6 +15,7 @@ import ViewAndActionInstructor from "./pages/admin/instructor/ViewAndActionInstr
 import RegisterInstructor from "./pages/admin/instructor/RegisterInstructor";
 import ViewAndActionCourse from "./pages/admin/course/ViewAndActionCourse";
 import RegisterCourse from "./pages/admin/course/RegisterCourse";
+import OfferRequests from "./pages/admin/course/OfferRequests";
 import AdminSettings from "./pages/admin/AdminSettings";
 import { useAuth } from "./contexts/authContext";
 import ErrorPage from "./pages/ErrorPage";
@@ -117,6 +118,10 @@ export default function App() {
           <Route
             path="/admin/courses/action"
             element={adminData ? <ViewAndActionCourse /> : <AdminLogin />}
+          />
+          <Route
+            path="/admin/courses/offer-requests"
+            element={adminData ? <OfferRequests /> : <AdminLogin />}
           />
           <Route
             path="/admin/courses/register"

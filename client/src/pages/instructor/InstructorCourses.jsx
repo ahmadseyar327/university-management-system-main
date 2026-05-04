@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from "react";
 import { fetchResponse } from "../../api/service";
 import { courseEndpoints } from "../../api/endpoints/courseEndpoints";
 import { toast } from "react-toastify";
-import { toastErrorObject } from "../../utility/toasts";
-import InstructorLayout from '../../layouts/InstructorLayout';
-import OfferCourseTable from '../../components/tables/OfferCourseTable';
+import { toastErrorObject, toastSuccessObject } from "../../utility/toasts";
+import InstructorLayout from "../../layouts/InstructorLayout";
 
 export default function InstructorCourses() {
   const instructorId = JSON.parse(localStorage.getItem("instructor"))._id;
@@ -13,104 +12,140 @@ export default function InstructorCourses() {
   const [allCourses, setAllCourses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchOfferedCoursesData() {
-      try {
-        let res;
-        res = await fetchResponse(
-          courseEndpoints.getCoursesOfInstructor(instructorId),
-          0,
-          null
-        );
-        const resData = res.data;
-        if (!res.success) {
-          toast.error(res.message, toastErrorObject);
-          setIsLoading(false);
-          return;
-        }
-        console.log("Log data", resData);
-        setCourses(resData?.sort((a, b) => a.title.localeCompare(b.title)));
-        setIsLoading(false);
-      } catch (error) {
-        console.log(error);
-        setIsLoading(false);
-      }
-    }
-    fetchOfferedCoursesData();
+  async function load() {
+    const [offeredRes, catalogRes] = await Promise.all([
+      fetchResponse(courseEndpoints.getCoursesOfInstructor(instructorId), 0, null),
+      fetchResponse(courseEndpoints.getCourses(), 0, null),
+    ]);
 
-    async function fetchCoursesData() {
-      try {
-        let res;
-        res = await fetchResponse(
-          courseEndpoints.getCourses(),
-          0,
-          null
-        );
-        const resData = res.data;
-        if (!res.success) {
-          toast.error(res.message, toastErrorObject);
-          setIsLoading(false);
-          return;
-        }
-        console.log("Log data", resData);
-        setAllCourses(resData?.sort((a, b) => a.title.localeCompare(b.title)));
-        setIsLoading(false);
-      } catch (error) {
-        console.log(error);
-        setIsLoading(false);
-      }
+    if (!offeredRes?.success) {
+      toast.error(offeredRes?.message || "Could not load your courses", toastErrorObject);
+      setCourses([]);
+    } else {
+      const d = offeredRes.data || [];
+      setCourses([...d].sort((a, b) => a.title.localeCompare(b.title)));
     }
-    fetchCoursesData();
+
+    if (!catalogRes?.success) {
+      toast.error(catalogRes?.message || "Could not load catalog", toastErrorObject);
+      setAllCourses([]);
+    } else {
+      const d = catalogRes.data || [];
+      setAllCourses([...d].sort((a, b) => a.title.localeCompare(b.title)));
+    }
+  }
+
+  useEffect(() => {
+    (async () => {
+      setIsLoading(true);
+      await load();
+      setIsLoading(false);
+    })();
   }, [instructorId]);
 
-  async function offerCourse(item) {
-    let result = window.confirm("Are you sure to Offer this Course?");
-    if (!result) return;
-    setIsLoading(true);
-    try {
-      let res;
-      res = await fetchResponse(
-        courseEndpoints.offerCourse(),
-        1,
-        {instructorId, courseId: item._id}
-      );
-      const resData = res.data;
-      if (!res.success) {
-        toast.error(res.message, toastErrorObject);
-        setIsLoading(false);
-        return;
-      }
-      console.log("Log data", resData);
-      
-      // updating state
-      let duplicateArray = [...courses];
-      duplicateArray.push(item);
-      setCourses(duplicateArray);
-      setIsLoading(false);
-    } catch (error) {
-      console.log(error);
-      setIsLoading(false);
+  const statusMap = useMemo(() => {
+    const map = new Map();
+    for (const c of courses) {
+      map.set(c._id, c.status || "approved");
     }
+    return map;
+  }, [courses]);
+
+  async function requestOffer(item) {
+    const status = statusMap.get(item._id);
+    if (status === "approved") {
+      toast.success("Already assigned to you.", toastSuccessObject);
+      return;
+    }
+    if (status === "pending") {
+      toast.success("Request is already pending admin approval.", toastSuccessObject);
+      return;
+    }
+
+    const result = window.confirm("Send offer request to admin?");
+    if (!result) return;
+
+    setIsLoading(true);
+    const res = await fetchResponse(courseEndpoints.offerCourse(), 1, {
+      instructorId,
+      courseId: item._id,
+    });
+    setIsLoading(false);
+
+    if (!res?.success) {
+      toast.error(res?.message || "Could not send request", toastErrorObject);
+      return;
+    }
+
+    toast.success(res.message || "Request sent to admin", toastSuccessObject);
+    await load();
   }
 
   return (
     <InstructorLayout isLoading={isLoading}>
-      <OfferCourseTable
-        styles={"table-bordered"}
-        headers={[
-          "Title",
-          "Code",
-          "Type",
-          "Credit Hours",
-          "Fee",
-          "Offer Date",
-          "Action"
-        ]}
-        data={allCourses}
-        dataAttributes={["title", "code", "type", "creditHours", "fee", "createdAt"]}
-        handleAction={offerCourse}
-        notOffered={allCourses.filter(item1 => !courses.map(item2 => item2._id).includes(item1._id))}
-      />
+      <div className="card border-0 shadow-sm">
+        <div className="card-body">
+          <h5 className="mb-3">Courses catalog</h5>
+          <div className="table-responsive">
+            <table className="table table-sm table-bordered align-middle">
+              <thead className="table-light text-secondary">
+                <tr>
+                  <th>Title</th>
+                  <th>Code</th>
+                  <th>Type</th>
+                  <th>Credit Hours</th>
+                  <th>Fee</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allCourses.length ? (
+                  allCourses.map((item) => {
+                    const status = statusMap.get(item._id);
+                    return (
+                      <tr key={item._id}>
+                        <td>{item.title}</td>
+                        <td>{item.code}</td>
+                        <td>{item.type}</td>
+                        <td>{item.creditHours}</td>
+                        <td>{item.fee}</td>
+                        <td>
+                          {status === "approved"
+                            ? "Approved"
+                            : status === "pending"
+                            ? "Pending"
+                            : "Not requested"}
+                        </td>
+                        <td>
+                          {status === "approved" ? (
+                            <span className="badge bg-success">Assigned</span>
+                          ) : status === "pending" ? (
+                            <span className="badge bg-warning text-dark">Pending</span>
+                          ) : (
+                            <button
+                              onClick={() => void requestOffer(item)}
+                              className="btn btn-sm btn-secondary"
+                            >
+                              Request Offer
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td className="text-center" colSpan={7}>
+                      No record found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </InstructorLayout>
   );
 }

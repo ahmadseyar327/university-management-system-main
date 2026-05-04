@@ -3,7 +3,7 @@ import type { DrawerScreenProps } from "@react-navigation/drawer";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
-  Alert,
+  ActivityIndicator,
   FlatList,
   Pressable,
   RefreshControl,
@@ -47,6 +47,7 @@ export default function StudentRegisterCourseScreen(_props: Props) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [detail, setDetail] = useState<Row | null>(null);
+  const [registeringId, setRegisteringId] = useState("");
   const firstFocus = useRef(true);
 
   const load = useCallback(async () => {
@@ -108,30 +109,24 @@ export default function StudentRegisterCourseScreen(_props: Props) {
       return;
     }
 
-    Alert.alert("Register course", `Register for ${titleOf(item)}?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Register",
-        onPress: async () => {
-          const res = await fetchResponse(courseEndpoints.registerCourseByStudent(), 1, {
-            studentId,
-            courseId: cId,
-            instructorId,
-          });
-          if (!res?.success) {
-            toastError(res?.message ?? "Registration failed");
-            return;
-          }
-          toastSuccess(res.message ?? "Course registered successfully.");
-          setRegisteredIds((prev) => {
-            const next = new Set(prev);
-            next.add(cId);
-            return next;
-          });
-          await load();
-        },
-      },
-    ]);
+    setRegisteringId(cId);
+    const res = await fetchResponse(courseEndpoints.registerCourseByStudent(), 1, {
+      studentId,
+      courseId: cId,
+      instructorId,
+    });
+    setRegisteringId("");
+    if (!res?.success) {
+      toastError(res?.message ?? "Registration failed");
+      return;
+    }
+    toastSuccess(res.message ?? "Course registered successfully.");
+    setRegisteredIds((prev) => {
+      const next = new Set(prev);
+      next.add(cId);
+      return next;
+    });
+    await load();
   }
 
   async function onRefresh() {
@@ -188,19 +183,19 @@ export default function StudentRegisterCourseScreen(_props: Props) {
             <Text style={styles.detailTitle}>{titleOf(detail)}</Text>
             <View style={styles.detailCard}>
               <Text style={styles.k}>Code</Text>
-              <Text style={styles.v}>{String(detail.code ?? "—")}</Text>
+              <Text style={styles.v}>{String(detail.code ?? "?")}</Text>
               <View style={styles.divider} />
               <Text style={styles.k}>Type</Text>
-              <Text style={styles.v}>{String(detail.type ?? "—")}</Text>
+              <Text style={styles.v}>{String(detail.type ?? "?")}</Text>
               <View style={styles.divider} />
               <Text style={styles.k}>Credit hours</Text>
-              <Text style={styles.v}>{String(detail.creditHours ?? "—")}</Text>
+              <Text style={styles.v}>{String(detail.creditHours ?? "?")}</Text>
               <View style={styles.divider} />
               <Text style={styles.k}>Fee</Text>
-              <Text style={styles.v}>{String(detail.fee ?? "—")}</Text>
+              <Text style={styles.v}>{String(detail.fee ?? "?")}</Text>
               <View style={styles.divider} />
               <Text style={styles.k}>Instructor</Text>
-              <Text style={styles.v}>{String(detail.instructorName ?? "—")}</Text>
+              <Text style={styles.v}>{String(detail.instructorName ?? "?")}</Text>
             </View>
             {registeredIds.has(courseKey(detail)) ? (
               <View style={styles.registeredBtn}>
@@ -208,7 +203,11 @@ export default function StudentRegisterCourseScreen(_props: Props) {
               </View>
             ) : (
               <Pressable style={styles.primaryBtn} onPress={() => void register(detail)}>
-                <Text style={styles.primaryTxt}>Register now</Text>
+                {registeringId === courseKey(detail) ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.primaryTxt}>Register now</Text>
+                )}
               </Pressable>
             )}
           </>

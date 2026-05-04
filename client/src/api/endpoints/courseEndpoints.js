@@ -10,6 +10,9 @@ export const courseEndpoints = {
   getStudentsOfInstructor: (id) => `${process.env.REACT_APP_API_URL}${title}registeredStudents/getAll/${id}`,
 
   offerCourse: () => `${process.env.REACT_APP_API_URL}${title}offered/register/`,
+  getOfferRequests: () => `${process.env.REACT_APP_API_URL}${title}offered/requests/getAll`,
+  reviewOfferRequest: (id) =>
+    `${process.env.REACT_APP_API_URL}${title}offered/requests/review/${id}`,
 
   getCoursesOfInstructor: (id) => `${process.env.REACT_APP_API_URL}${title}offered/getAll/${id}`,
 

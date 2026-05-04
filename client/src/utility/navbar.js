@@ -103,6 +103,10 @@ export const adminNavbarContent = (setAdminData) => ({
       path: '/admin/courses/action',
     },
     {
+      title: 'Offer Requests',
+      path: '/admin/courses/offer-requests',
+    },
+    {
       title: 'Settings',
       path: '/admin/settings',
     },
