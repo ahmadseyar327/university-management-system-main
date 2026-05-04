@@ -1,5 +1,6 @@
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import AmbientBackground from "./AmbientBackground";
 
 type Props = {
   children: React.ReactNode;
@@ -30,26 +31,30 @@ export default function AuthScreenShell({
 }: Props) {
   const tone = badgeStyles[badgeTone];
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.outer}
-      keyboardShouldPersistTaps="handled"
-    >
-      {roleBadge ? (
-        <View style={[styles.badge, { backgroundColor: tone.bg }]}>
-          <Text style={[styles.badgeText, { color: tone.fg }]}>{roleBadge}</Text>
-        </View>
-      ) : null}
-      {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
-      <Text style={styles.title}>{title}</Text>
-      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-      <View style={styles.card}>{children}</View>
-      {footer}
-    </ScrollView>
+    <View style={styles.root}>
+      <AmbientBackground variant="auth" />
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.outer}
+        keyboardShouldPersistTaps="handled"
+      >
+        {roleBadge ? (
+          <View style={[styles.badge, { backgroundColor: tone.bg }]}>
+            <Text style={[styles.badgeText, { color: tone.fg }]}>{roleBadge}</Text>
+          </View>
+        ) : null}
+        {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
+        <Text style={styles.title}>{title}</Text>
+        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        <View style={styles.card}>{children}</View>
+        {footer}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: "#f1f5f9" },
   scroll: { flex: 1, backgroundColor: "#f1f5f9" },
   outer: {
     flexGrow: 1,

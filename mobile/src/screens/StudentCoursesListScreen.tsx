@@ -95,22 +95,22 @@ export default function StudentCoursesListScreen(_props: Props) {
             <Text style={styles.detailTitle}>{courseTitle(detail)}</Text>
             <View style={styles.detailCard}>
               <Text style={styles.k}>Code</Text>
-              <Text style={styles.v}>{String(detail.code ?? "�")}</Text>
+              <Text style={styles.v}>{String(detail.code ?? "ï¿½")}</Text>
               <View style={styles.divider} />
               <Text style={styles.k}>Type</Text>
-              <Text style={styles.v}>{String(detail.type ?? "�")}</Text>
+              <Text style={styles.v}>{String(detail.type ?? "ï¿½")}</Text>
               <View style={styles.divider} />
               <Text style={styles.k}>Credit hours</Text>
-              <Text style={styles.v}>{String(detail.creditHours ?? "�")}</Text>
+              <Text style={styles.v}>{String(detail.creditHours ?? "ï¿½")}</Text>
               <View style={styles.divider} />
               <Text style={styles.k}>Fee</Text>
-              <Text style={styles.v}>{String(detail.fee ?? "�")}</Text>
+              <Text style={styles.v}>{String(detail.fee ?? "ï¿½")}</Text>
               <View style={styles.divider} />
               <Text style={styles.k}>Instructor</Text>
-              <Text style={styles.v}>{String(detail.instructorName ?? "�")}</Text>
+              <Text style={styles.v}>{String(detail.instructorName ?? "ï¿½")}</Text>
               <View style={styles.divider} />
               <Text style={styles.k}>Registered</Text>
-              <Text style={styles.v}>{String(detail.createdAt ?? "�")}</Text>
+              <Text style={styles.v}>{String(detail.createdAt ?? "ï¿½")}</Text>
             </View>
           </>
         ) : null}

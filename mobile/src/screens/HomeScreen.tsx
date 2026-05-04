@@ -8,6 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
+import AmbientBackground from "../components/AmbientBackground";
 import { useAuth } from "../contexts/AuthContext";
 import type { RootStackParamList } from "../navigation/types";
 
@@ -35,116 +36,120 @@ export default function HomeScreen({ navigation }: { navigation: Nav }) {
   const hasSession = !!(studentData || instructorData || adminData);
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
-      <View style={styles.hero}>
-        <Text style={styles.brandMark}>UMS</Text>
-        <Text style={styles.title}>University Management</Text>
-        <Text style={styles.tagline}>
-          Secure access for students, faculty, and administrators. Sign in with your existing account.
+    <View style={styles.root}>
+      <AmbientBackground variant="home" />
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
+        <View style={styles.hero}>
+          <Text style={styles.brandMark}>UMS</Text>
+          <Text style={styles.title}>University Management</Text>
+          <Text style={styles.tagline}>
+            Secure access for students, faculty, and administrators. Sign in with your existing account.
+          </Text>
+        </View>
+
+        {hasSession && (
+          <View style={styles.sessionCard}>
+            <Text style={styles.sessionTitle}>You’re signed in</Text>
+            <Text style={styles.sessionHint}>Continue where you left off.</Text>
+            {studentData && (
+              <Pressable
+                style={styles.primaryBtn}
+                onPress={() => navigation.navigate("StudentTabs")}
+              >
+                <Text style={styles.primaryBtnText}>Continue as student</Text>
+              </Pressable>
+            )}
+            {instructorData && (
+              <Pressable
+                style={styles.primaryBtn}
+                onPress={() => navigation.navigate("InstructorTabs")}
+              >
+                <Text style={styles.primaryBtnText}>Continue as instructor</Text>
+              </Pressable>
+            )}
+            {adminData && (
+              <Pressable
+                style={styles.primaryBtn}
+                onPress={() => navigation.navigate("AdminTabs")}
+              >
+                <Text style={styles.primaryBtnText}>Continue as administrator</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+
+        <Text style={styles.sectionEyebrow}>Get started</Text>
+        <Text style={styles.sectionTitle}>Choose your role</Text>
+        <Text style={styles.sectionSub}>
+          You’ll open the sign-in screen first. Need an account? You can register from there where your role allows it.
         </Text>
-      </View>
 
-      {hasSession && (
-        <View style={styles.sessionCard}>
-          <Text style={styles.sessionTitle}>You’re signed in</Text>
-          <Text style={styles.sessionHint}>Continue where you left off.</Text>
-          {studentData && (
-            <Pressable
-              style={styles.primaryBtn}
-              onPress={() => navigation.navigate("StudentTabs")}
-            >
-              <Text style={styles.primaryBtnText}>Continue as student</Text>
-            </Pressable>
-          )}
-          {instructorData && (
-            <Pressable
-              style={styles.primaryBtn}
-              onPress={() => navigation.navigate("InstructorTabs")}
-            >
-              <Text style={styles.primaryBtnText}>Continue as instructor</Text>
-            </Pressable>
-          )}
-          {adminData && (
-            <Pressable
-              style={styles.primaryBtn}
-              onPress={() => navigation.navigate("AdminTabs")}
-            >
-              <Text style={styles.primaryBtnText}>Continue as administrator</Text>
-            </Pressable>
-          )}
-        </View>
-      )}
+        <Pressable
+          style={styles.roleCard}
+          onPress={() => navigation.navigate("StudentLogin")}
+          android_ripple={{ color: "#e2e8f0" }}
+        >
+          <View style={[styles.roleAccent, { backgroundColor: "#4f46e5" }]} />
+          <View style={styles.roleBody}>
+            <Text style={styles.roleName}>Student</Text>
+            <Text style={styles.roleDesc}>Courses, marks, attendance, and profile</Text>
+          </View>
+          <Text style={styles.roleChevron}>→</Text>
+        </Pressable>
 
-      <Text style={styles.sectionEyebrow}>Get started</Text>
-      <Text style={styles.sectionTitle}>Choose your role</Text>
-      <Text style={styles.sectionSub}>
-        You’ll open the sign-in screen first. Need an account? You can register from there where your role allows it.
-      </Text>
+        <Pressable
+          style={styles.roleCard}
+          onPress={() => navigation.navigate("InstructorLogin")}
+          android_ripple={{ color: "#e2e8f0" }}
+        >
+          <View style={[styles.roleAccent, { backgroundColor: "#059669" }]} />
+          <View style={styles.roleBody}>
+            <Text style={styles.roleName}>Instructor</Text>
+            <Text style={styles.roleDesc}>Classes, attendance, and grading</Text>
+          </View>
+          <Text style={styles.roleChevron}>→</Text>
+        </Pressable>
 
-      <Pressable
-        style={styles.roleCard}
-        onPress={() => navigation.navigate("StudentLogin")}
-        android_ripple={{ color: "#e2e8f0" }}
-      >
-        <View style={[styles.roleAccent, { backgroundColor: "#4f46e5" }]} />
-        <View style={styles.roleBody}>
-          <Text style={styles.roleName}>Student</Text>
-          <Text style={styles.roleDesc}>Courses, marks, attendance, and profile</Text>
-        </View>
-        <Text style={styles.roleChevron}>→</Text>
-      </Pressable>
+        <Pressable
+          style={styles.roleCard}
+          onPress={() => navigation.navigate("AdminLogin")}
+          android_ripple={{ color: "#e2e8f0" }}
+        >
+          <View style={[styles.roleAccent, { backgroundColor: "#c2410c" }]} />
+          <View style={styles.roleBody}>
+            <Text style={styles.roleName}>Administrator</Text>
+            <Text style={styles.roleDesc}>Instructors, courses, and system records</Text>
+          </View>
+          <Text style={styles.roleChevron}>→</Text>
+        </Pressable>
 
-      <Pressable
-        style={styles.roleCard}
-        onPress={() => navigation.navigate("InstructorLogin")}
-        android_ripple={{ color: "#e2e8f0" }}
-      >
-        <View style={[styles.roleAccent, { backgroundColor: "#059669" }]} />
-        <View style={styles.roleBody}>
-          <Text style={styles.roleName}>Instructor</Text>
-          <Text style={styles.roleDesc}>Classes, attendance, and grading</Text>
-        </View>
-        <Text style={styles.roleChevron}>→</Text>
-      </Pressable>
-
-      <Pressable
-        style={styles.roleCard}
-        onPress={() => navigation.navigate("AdminLogin")}
-        android_ripple={{ color: "#e2e8f0" }}
-      >
-        <View style={[styles.roleAccent, { backgroundColor: "#c2410c" }]} />
-        <View style={styles.roleBody}>
-          <Text style={styles.roleName}>Administrator</Text>
-          <Text style={styles.roleDesc}>Instructors, courses, and system records</Text>
-        </View>
-        <Text style={styles.roleChevron}>→</Text>
-      </Pressable>
-
-      {hasSession && (
-        <View style={styles.signOutBlock}>
-          <Text style={styles.signOutEyebrow}>Session</Text>
-          {studentData && (
-            <Pressable style={styles.signOutBtn} onPress={() => void signOutStudent()}>
-              <Text style={styles.signOutText}>Sign out student</Text>
-            </Pressable>
-          )}
-          {instructorData && (
-            <Pressable style={styles.signOutBtn} onPress={() => void signOutInstructor()}>
-              <Text style={styles.signOutText}>Sign out instructor</Text>
-            </Pressable>
-          )}
-          {adminData && (
-            <Pressable style={styles.signOutBtn} onPress={() => void signOutAdmin()}>
-              <Text style={styles.signOutText}>Sign out administrator</Text>
-            </Pressable>
-          )}
-        </View>
-      )}
-    </ScrollView>
+        {hasSession && (
+          <View style={styles.signOutBlock}>
+            <Text style={styles.signOutEyebrow}>Session</Text>
+            {studentData && (
+              <Pressable style={styles.signOutBtn} onPress={() => void signOutStudent()}>
+                <Text style={styles.signOutText}>Sign out student</Text>
+              </Pressable>
+            )}
+            {instructorData && (
+              <Pressable style={styles.signOutBtn} onPress={() => void signOutInstructor()}>
+                <Text style={styles.signOutText}>Sign out instructor</Text>
+              </Pressable>
+            )}
+            {adminData && (
+              <Pressable style={styles.signOutBtn} onPress={() => void signOutAdmin()}>
+                <Text style={styles.signOutText}>Sign out administrator</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: "#f8fafc" },
   scroll: { flex: 1, backgroundColor: "#f8fafc" },
   container: {
     padding: 24,
