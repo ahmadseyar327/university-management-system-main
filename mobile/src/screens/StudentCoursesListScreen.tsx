@@ -1,17 +1,23 @@
+import { Ionicons } from "@expo/vector-icons";
 import type { DrawerScreenProps } from "@react-navigation/drawer";
-import React, { useCallback, useEffect, useState } from "react";
-import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import React, { useCallback, useRef, useState } from "react";
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { courseEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
 import LoadingView from "../components/LoadingView";
+import SlideOverDetail from "../components/SlideOverDetail";
 import { useAuth } from "../contexts/AuthContext";
 import type { StudentTabParamList } from "../navigation/types";
 import { mongoId } from "../utils/mongoId";
 import { toastError } from "../utils/toasts";
 
 type Row = Record<string, unknown>;
-
 type Props = DrawerScreenProps<StudentTabParamList, "StudentCourses">;
+
+function courseTitle(row: Row) {
+  return String(row.title ?? "Untitled course");
+}
 
 export default function StudentCoursesListScreen(_props: Props) {
   const { studentData } = useAuth();
@@ -19,6 +25,8 @@ export default function StudentCoursesListScreen(_props: Props) {
   const [courses, setCourses] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [detail, setDetail] = useState<Row | null>(null);
+  const firstFocus = useRef(true);
 
   const load = useCallback(async () => {
     if (!studentId) return;
@@ -32,17 +40,22 @@ export default function StudentCoursesListScreen(_props: Props) {
     setCourses([...data].sort((a, b) => String(a.title).localeCompare(String(b.title))));
   }, [studentId]);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      await load();
-      if (!cancelled) setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        if (firstFocus.current) {
+          setLoading(true);
+          firstFocus.current = false;
+        }
+        await load();
+        if (!cancelled) setLoading(false);
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [load])
+  );
 
   async function onRefresh() {
     setRefreshing(true);
@@ -50,42 +63,100 @@ export default function StudentCoursesListScreen(_props: Props) {
     setRefreshing(false);
   }
 
-  if (loading) return <LoadingView />;
+  if (loading && courses.length === 0) return <LoadingView />;
 
   return (
-    <FlatList
-      data={courses}
-      keyExtractor={(item, i) => String(item._id ?? i)}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      contentContainerStyle={styles.list}
-      ListEmptyComponent={<Text style={styles.empty}>No registered courses yet.</Text>}
-      renderItem={({ item }) => (
-        <View style={styles.card}>
-          <Text style={styles.title}>{String(item.title ?? "")}</Text>
-          <Text style={styles.meta}>
-            {String(item.code ?? "")} Â· {String(item.type ?? "")} Â· {String(item.creditHours ?? "")} cr
-          </Text>
-          <Text style={styles.meta}>Fee: {String(item.fee ?? "")}</Text>
-          <Text style={styles.meta}>Instructor: {String(item.instructorName ?? "")}</Text>
-          <Text style={styles.date}>Registered: {String(item.createdAt ?? "")}</Text>
-        </View>
-      )}
-    />
+    <View style={styles.screen}>
+      <FlatList
+        data={courses}
+        keyExtractor={(item, i) => String(item._id ?? i)}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        contentContainerStyle={styles.list}
+        ListEmptyComponent={<Text style={styles.empty}>No registered courses yet.</Text>}
+        ItemSeparatorComponent={() => <View style={styles.sep} />}
+        renderItem={({ item }) => (
+          <Pressable
+            style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+            onPress={() => setDetail(item)}
+            android_ripple={{ color: "#e2e8f0" }}
+          >
+            <Text style={styles.rowName} numberOfLines={1}>
+              {courseTitle(item)}
+            </Text>
+            <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+          </Pressable>
+        )}
+      />
+
+      <SlideOverDetail open={detail !== null} onClosed={() => setDetail(null)}>
+        {detail ? (
+          <>
+            <Text style={styles.detailEyebrow}>Course</Text>
+            <Text style={styles.detailTitle}>{courseTitle(detail)}</Text>
+            <View style={styles.detailCard}>
+              <Text style={styles.k}>Code</Text>
+              <Text style={styles.v}>{String(detail.code ?? "—")}</Text>
+              <View style={styles.divider} />
+              <Text style={styles.k}>Type</Text>
+              <Text style={styles.v}>{String(detail.type ?? "—")}</Text>
+              <View style={styles.divider} />
+              <Text style={styles.k}>Credit hours</Text>
+              <Text style={styles.v}>{String(detail.creditHours ?? "—")}</Text>
+              <View style={styles.divider} />
+              <Text style={styles.k}>Fee</Text>
+              <Text style={styles.v}>{String(detail.fee ?? "—")}</Text>
+              <View style={styles.divider} />
+              <Text style={styles.k}>Instructor</Text>
+              <Text style={styles.v}>{String(detail.instructorName ?? "—")}</Text>
+              <View style={styles.divider} />
+              <Text style={styles.k}>Registered</Text>
+              <Text style={styles.v}>{String(detail.createdAt ?? "—")}</Text>
+            </View>
+          </>
+        ) : null}
+      </SlideOverDetail>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  list: { padding: 16, paddingBottom: 32, backgroundColor: "#f7fafc" },
-  empty: { textAlign: "center", color: "#718096", marginTop: 40 },
-  card: {
+  screen: { flex: 1, backgroundColor: "#f1f5f9" },
+  list: { paddingVertical: 8, paddingBottom: 40 },
+  empty: { textAlign: "center", color: "#64748b", marginTop: 42, fontSize: 15 },
+  sep: { height: 1, backgroundColor: "#e2e8f0", marginLeft: 20 },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+  },
+  rowPressed: { backgroundColor: "#f8fafc" },
+  rowName: { flex: 1, fontSize: 17, fontWeight: "600", color: "#0f172a", marginRight: 8 },
+  detailEyebrow: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#94a3b8",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    marginBottom: 8,
+  },
+  detailTitle: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: "#0f172a",
+    letterSpacing: -0.5,
+    marginBottom: 20,
+  },
+  detailCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 18,
     borderWidth: 1,
     borderColor: "#e2e8f0",
   },
-  title: { fontSize: 17, fontWeight: "700", color: "#1a202c", marginBottom: 6 },
-  meta: { fontSize: 14, color: "#4a5568", marginBottom: 2 },
-  date: { fontSize: 12, color: "#718096", marginTop: 6 },
+  k: { fontSize: 12, fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", marginBottom: 4 },
+  v: { fontSize: 16, fontWeight: "600", color: "#0f172a", marginBottom: 14 },
+  divider: { height: 1, backgroundColor: "#f1f5f9", marginVertical: 4 },
 });

@@ -4,6 +4,7 @@ import React from "react";
 import AdminCoursesListScreen from "../screens/AdminCoursesListScreen";
 import AdminHomeScreen from "../screens/AdminHomeScreen";
 import AdminInstructorsListScreen from "../screens/AdminInstructorsListScreen";
+import AdminOfferRequestsScreen from "../screens/AdminOfferRequestsScreen";
 import AdminRegisterCourseScreen from "../screens/AdminRegisterCourseScreen";
 import AdminRegisterInstructorScreen from "../screens/AdminRegisterInstructorScreen";
 import AdminSettingsScreen from "../screens/AdminSettingsScreen";
@@ -15,6 +16,7 @@ function adminIcon(name: keyof AdminTabParamList) {
   const map: Record<keyof AdminTabParamList, keyof typeof Ionicons.glyphMap> = {
     AdminOverview: "person-circle-outline",
     AdminInstructors: "people-outline",
+    AdminOfferRequests: "notifications-outline",
     AdminRegInstructor: "person-add-outline",
     AdminCourses: "library-outline",
     AdminRegCourse: "add-circle-outline",
@@ -37,7 +39,12 @@ export default function AdminTabNavigator() {
         drawerActiveBackgroundColor: "#ffedd5",
         drawerItemStyle: { borderRadius: 10, marginHorizontal: 8 },
         drawerLabelStyle: { marginLeft: -10, fontWeight: "600", fontSize: 14 },
-        drawerStyle: { width: 280, backgroundColor: "#f8fafc", borderRightWidth: 1, borderRightColor: "#e2e8f0" },
+        drawerStyle: {
+          width: 280,
+          backgroundColor: "#f8fafc",
+          borderRightWidth: 1,
+          borderRightColor: "#e2e8f0",
+        },
         sceneStyle: { backgroundColor: "#ffffff" },
         headerTintColor: "#9a3412",
         headerTitleStyle: { fontWeight: "700" },
@@ -49,6 +56,7 @@ export default function AdminTabNavigator() {
     >
       <Drawer.Screen name="AdminOverview" component={AdminHomeScreen} options={{ title: "Overview" }} />
       <Drawer.Screen name="AdminInstructors" component={AdminInstructorsListScreen} options={{ title: "Instructors" }} />
+      <Drawer.Screen name="AdminOfferRequests" component={AdminOfferRequestsScreen} options={{ title: "Offer requests" }} />
       <Drawer.Screen name="AdminRegInstructor" component={AdminRegisterInstructorScreen} options={{ title: "Register instructor" }} />
       <Drawer.Screen name="AdminCourses" component={AdminCoursesListScreen} options={{ title: "Courses" }} />
       <Drawer.Screen name="AdminRegCourse" component={AdminRegisterCourseScreen} options={{ title: "Register course" }} />

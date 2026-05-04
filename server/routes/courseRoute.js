@@ -11,6 +11,8 @@ const {
   deleteCourse,
   getRegisteredStudentsOfInstructor,
   getOfferedCourses,
+  getOfferedCourseRequests,
+  reviewOfferedCourseRequest,
 } = require("../controllers/courseController");
 
 const router = express.Router();
@@ -24,6 +26,8 @@ router.delete("/delete/:id", deleteCourse);
 router.post("/offered/register", registerOfferedCourse);
 router.get("/offered/getAll", getOfferedCourses);
 router.get("/offered/getAll/:id", getOfferedCoursesOfInstructor);
+router.get("/offered/requests/getAll", getOfferedCourseRequests);
+router.put("/offered/requests/review/:id", reviewOfferedCourseRequest);
 
 router.post("/registered/register", registerRegisteredCourse);
 router.get("/registered/getAll/:id", getRegisteredCoursesOfStudent);

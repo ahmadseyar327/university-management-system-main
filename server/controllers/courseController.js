@@ -284,28 +284,33 @@ const registerOfferedCourse = async (req, res) => {
     }
 
     // ensuring uniqueness
-    const offeredCourseExists = await offeredCourseSchema.find({
+    const offeredCourseExists = await offeredCourseSchema.findOne({
       courseId,
       instructorId,
+      status: { $in: ["pending", "approved"] },
     });
-    if (offeredCourseExists.length) {
+    if (offeredCourseExists) {
       return res.status(400).send({
         success: false,
-        message: 'This instructor is already taking this course.',
+        message:
+          offeredCourseExists.status === "pending"
+            ? "Your request for this course is still pending admin review."
+            : "This instructor is already taking this course.",
       });
     }
 
-    // registration
+    // request registration (admin must approve)
     const newOfferedCourse = new offeredCourseSchema({
       courseId,
       instructorId,
+      status: "pending",
     });
     const result = await newOfferedCourse.save();
 
     if (result) {
       res.status(200).send({
         success: true,
-        message: 'Course offered successfully!',
+        message: 'Offer request sent to admin.',
         data: newOfferedCourse,
       });
     } else {
@@ -335,7 +340,14 @@ const getOfferedCoursesOfInstructor = async (req, res) => {
       for (let i = 0; i < registeredCourses.length; i++) {
         const element = registeredCourses[i];
         const course = await courseSchema.findById(element.courseId);
-        registeredCoursesDetail.push(course);
+        if (course) {
+          registeredCoursesDetail.push({
+            ...course._doc,
+            requestId: element._id,
+            status: element.status || "approved",
+            reviewedAt: element.reviewedAt,
+          });
+        }
       }
       res.status(200).send({
         success: true,
@@ -496,7 +508,9 @@ const getRegisteredCoursesOfStudent = async (req, res) => {
 
 const getOfferedCourses = async (req, res) => {
   try {
-    const registeredCourses = await offeredCourseSchema.find();
+    const registeredCourses = await offeredCourseSchema.find({
+      status: "approved",
+    });
     if (registeredCourses.length) {
       let registeredCoursesDetail = [];
       for (let i = 0; i < registeredCourses.length; i++) {
@@ -574,6 +588,119 @@ const getRegisteredStudentsOfInstructor = async (req, res) => {
   }
 };
 
+const getOfferedCourseRequests = async (req, res) => {
+  try {
+    const requests = await offeredCourseSchema.find({
+      status: "pending",
+    });
+
+    if (!requests.length) {
+      return res.status(204).send({
+        success: true,
+        message: "No pending offer requests.",
+      });
+    }
+
+    const detail = [];
+    for (let i = 0; i < requests.length; i++) {
+      const reqItem = requests[i];
+      const course = await courseSchema.findById(reqItem.courseId);
+      const instructor = await instructorSchema.findById(reqItem.instructorId);
+      if (course && instructor) {
+        detail.push({
+          ...reqItem._doc,
+          courseTitle: course.title,
+          courseCode: course.code,
+          instructorName: instructor.fname + " " + instructor.lname,
+          instructorEmail: instructor.email,
+        });
+      }
+    }
+
+    res.status(200).send({
+      success: true,
+      message: "Offer requests fetched successfully!",
+      count: detail.length,
+      data: detail,
+    });
+  } catch (error) {
+    res.status(500).send({
+      success: false,
+      message: "Something went wrong while fetching offer requests.",
+      error,
+    });
+  }
+};
+
+const reviewOfferedCourseRequest = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { adminId, action } = req.body;
+    const normalizedAction = String(action || "").toLowerCase();
+
+    if (!adminId) {
+      return res.status(400).send({
+        success: false,
+        message: "Admin ID is mandatory!",
+      });
+    }
+    if (normalizedAction !== "approve" && normalizedAction !== "decline") {
+      return res.status(400).send({
+        success: false,
+        message: "Action must be approve or decline.",
+      });
+    }
+
+    const request = await offeredCourseSchema.findById(id);
+    if (!request) {
+      return res.status(404).send({
+        success: false,
+        message: "Offer request not found.",
+      });
+    }
+    if (request.status !== "pending") {
+      return res.status(400).send({
+        success: false,
+        message: "This offer request has already been reviewed.",
+      });
+    }
+
+    if (normalizedAction === "approve") {
+      const approvedExists = await offeredCourseSchema.findOne({
+        courseId: request.courseId,
+        instructorId: request.instructorId,
+        status: "approved",
+      });
+      if (approvedExists) {
+        request.status = "declined";
+      } else {
+        request.status = "approved";
+      }
+    } else {
+      request.status = "declined";
+    }
+
+    request.reviewedByAdminId = adminId;
+    request.reviewedAt = new Date();
+    await request.save();
+
+    res.status(200).send({
+      success: true,
+      message:
+        request.status === "approved"
+          ? "Offer request approved and course assigned."
+          : "Offer request declined.",
+      data: request,
+    });
+  } catch (error) {
+    res.status(500).send({
+      success: false,
+      message: "Something went wrong while reviewing offer request.",
+      error,
+    });
+  }
+};
+
 module.exports = {
   registerCourse,
   getCourses,
@@ -586,4 +713,6 @@ module.exports = {
   getRegisteredCoursesOfStudent,
   getOfferedCourses,
   getRegisteredStudentsOfInstructor,
+  getOfferedCourseRequests,
+  reviewOfferedCourseRequest,
 };
