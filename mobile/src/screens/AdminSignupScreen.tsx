@@ -1,9 +1,9 @@
 import type { StackNavigationProp } from "@react-navigation/stack";
 import React, { useRef, useState } from "react";
-import { Keyboard, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Keyboard, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { adminEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
-import { FormTextInput, PrimaryButton } from "../components";
+import { AuthScreenShell, FormTextInput, PrimaryButton } from "../components";
 import type { RootStackParamList } from "../navigation/types";
 import { toastError, toastSuccess } from "../utils/toasts";
 
@@ -66,9 +66,25 @@ export default function AdminSignupScreen({ navigation }: { navigation: Nav }) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>Admin sign up</Text>
-      <Text style={styles.hint}>Matches the web admin registration flow.</Text>
+    <AuthScreenShell
+      roleBadge="Administrator account"
+      badgeTone="admin"
+      title="Create account"
+      subtitle="You are registering as a system administrator. This matches the web admin registration flow. Use only if your institution permits it."
+      footer={
+        <View style={styles.footer}>
+          <Text style={styles.footerMuted}>Already have access?</Text>
+          <Pressable
+            onPress={() => navigation.navigate("AdminLogin")}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in as administrator"
+          >
+            <Text style={styles.footerLink}>Sign in</Text>
+          </Pressable>
+        </View>
+      }
+    >
       <View style={styles.row}>
         <View style={styles.half}>
           <FormTextInput
@@ -124,23 +140,15 @@ export default function AdminSignupScreen({ navigation }: { navigation: Nav }) {
         autoCorrect={false}
         blurOnSubmit
       />
-      <PrimaryButton title="Register" loading={loading} onPress={() => void handleSignup()} />
-      <Text style={styles.footer}>
-        Already have an account?{" "}
-        <Text style={styles.link} onPress={() => navigation.navigate("AdminLogin")}>
-          Sign in
-        </Text>
-      </Text>
-    </ScrollView>
+      <PrimaryButton title="Create account" loading={loading} onPress={() => void handleSignup()} />
+    </AuthScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24, paddingTop: 24, paddingBottom: 40, backgroundColor: "#fff" },
-  title: { fontSize: 22, fontWeight: "700", color: "#1a202c", marginBottom: 8 },
-  hint: { fontSize: 14, color: "#718096", marginBottom: 20, lineHeight: 20 },
   row: { flexDirection: "row", marginHorizontal: -6 },
   half: { flex: 1, paddingHorizontal: 6 },
-  footer: { marginTop: 20, fontSize: 15, color: "#4a5568", textAlign: "center" },
-  link: { color: "#1a365d", fontWeight: "700" },
+  footer: { marginTop: 28, alignItems: "center" },
+  footerMuted: { fontSize: 14, color: "#64748b", marginBottom: 6 },
+  footerLink: { fontSize: 16, fontWeight: "700", color: "#c2410c" },
 });

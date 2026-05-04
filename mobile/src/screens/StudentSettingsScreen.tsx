@@ -1,4 +1,4 @@
-import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
+import type { DrawerScreenProps } from "@react-navigation/drawer";
 import React, { useRef, useState } from "react";
 import { Keyboard, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { studentEndpoints } from "../api/endpoints";
@@ -9,7 +9,7 @@ import type { StudentTabParamList } from "../navigation/types";
 import { mongoId } from "../utils/mongoId";
 import { toastError, toastSuccess } from "../utils/toasts";
 
-type Props = BottomTabScreenProps<StudentTabParamList, "StudentSettings">;
+type Props = DrawerScreenProps<StudentTabParamList, "StudentSettings">;
 
 type Form = { fname: string; lname: string; email: string; password: string };
 

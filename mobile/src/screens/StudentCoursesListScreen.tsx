@@ -1,4 +1,4 @@
-import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
+import type { DrawerScreenProps } from "@react-navigation/drawer";
 import React, { useCallback, useEffect, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { courseEndpoints } from "../api/endpoints";
@@ -11,7 +11,7 @@ import { toastError } from "../utils/toasts";
 
 type Row = Record<string, unknown>;
 
-type Props = BottomTabScreenProps<StudentTabParamList, "StudentCourses">;
+type Props = DrawerScreenProps<StudentTabParamList, "StudentCourses">;
 
 export default function StudentCoursesListScreen(_props: Props) {
   const { studentData } = useAuth();

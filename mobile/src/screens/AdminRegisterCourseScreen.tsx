@@ -1,4 +1,4 @@
-import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
+import type { DrawerScreenProps } from "@react-navigation/drawer";
 import React, { useRef, useState } from "react";
 import { Keyboard, Platform, ScrollView, StyleSheet, Text } from "react-native";
 import { courseEndpoints } from "../api/endpoints";
@@ -10,7 +10,7 @@ import type { AdminTabParamList } from "../navigation/types";
 import { mongoId } from "../utils/mongoId";
 import { toastError, toastSuccess } from "../utils/toasts";
 
-type Props = BottomTabScreenProps<AdminTabParamList, "AdminRegCourse">;
+type Props = DrawerScreenProps<AdminTabParamList, "AdminRegCourse">;
 
 const typeOpts: SelectOption[] = [
   { label: "Core", value: "Core" },

@@ -1,4 +1,4 @@
-import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
+import type { DrawerScreenProps } from "@react-navigation/drawer";
 import React, { useCallback, useEffect, useState } from "react";
 import { FlatList, ScrollView, StyleSheet, Text, View } from "react-native";
 import { studentEndpoints } from "../api/endpoints";
@@ -13,7 +13,18 @@ import { toastError } from "../utils/toasts";
 type CourseOpt = { courseId: string; title: string; instructor: string };
 type AttRow = Record<string, unknown>;
 
-type Props = BottomTabScreenProps<StudentTabParamList, "StudentAttendance">;
+type Props = DrawerScreenProps<StudentTabParamList, "StudentAttendance">;
+
+function statusStyles(raw: string) {
+  const s = String(raw).trim().toUpperCase();
+  if (s.startsWith("P"))
+    return { bg: "#d1fae5", fg: "#047857", border: "#6ee7b7" };
+  if (s.startsWith("A"))
+    return { bg: "#fee2e2", fg: "#b91c1c", border: "#fecaca" };
+  if (s.startsWith("L"))
+    return { bg: "#ffedd5", fg: "#c2410c", border: "#fdba74" };
+  return { bg: "#e2e8f0", fg: "#475569", border: "#cbd5e1" };
+}
 
 export default function StudentAttendanceScreen(_props: Props) {
   const { studentData } = useAuth();
@@ -61,7 +72,7 @@ export default function StudentAttendanceScreen(_props: Props) {
         [...data].sort((a, b) => {
           const da = new Date(String(a.date)).getTime();
           const db = new Date(String(b.date)).getTime();
-          return da - db;
+          return db - da;
         })
       );
     }
@@ -81,7 +92,15 @@ export default function StudentAttendanceScreen(_props: Props) {
 
   return (
     <ScrollView style={styles.wrap} contentContainerStyle={styles.inner}>
-      <SimpleSelect label="Course | Instructor" options={opts} value={courseId} onChange={setCourseId} />
+      <View style={styles.hero}>
+        <Text style={styles.heroTitle}>Attendance</Text>
+        <Text style={styles.heroSub}>Pick a course to see each session and your status.</Text>
+      </View>
+
+      <View style={styles.panel}>
+        <SimpleSelect label="Course | Instructor" options={opts} value={courseId} onChange={setCourseId} />
+      </View>
+
       {loadingAtt ? (
         <LoadingView />
       ) : (
@@ -89,25 +108,30 @@ export default function StudentAttendanceScreen(_props: Props) {
           data={rows}
           scrollEnabled={false}
           keyExtractor={(_, i) => String(i)}
-          ListHeaderComponent={
-            <View style={styles.tableHead}>
-              <Text style={[styles.th, styles.colDate]}>Date</Text>
-              <Text style={[styles.th, styles.colStat]}>Status</Text>
-            </View>
-          }
           ListEmptyComponent={
             courseId ? (
-              <Text style={styles.empty}>No attendance rows.</Text>
+              <Text style={styles.empty}>No attendance records yet for this course.</Text>
             ) : (
-              <Text style={styles.empty}>Select a course.</Text>
+              <Text style={styles.empty}>Select a course to load your attendance.</Text>
             )
           }
-          renderItem={({ item }) => (
-            <View style={styles.tableRow}>
-              <Text style={[styles.td, styles.colDate]}>{String(item.date ?? "")}</Text>
-              <Text style={[styles.td, styles.colStat]}>{String(item.attendance ?? "")}</Text>
-            </View>
-          )}
+          renderItem={({ item }) => {
+            const stat = String(item.attendance ?? "");
+            const palette = statusStyles(stat);
+            return (
+              <View style={styles.card}>
+                <View style={styles.cardRow}>
+                  <View style={styles.dateCol}>
+                    <Text style={styles.dateLabel}>Session date</Text>
+                    <Text style={styles.dateValue}>{String(item.date ?? "").slice(0, 10)}</Text>
+                  </View>
+                  <View style={[styles.badge, { backgroundColor: palette.bg, borderColor: palette.border }]}>
+                    <Text style={[styles.badgeTxt, { color: palette.fg }]}>{stat || "—"}</Text>
+                  </View>
+                </View>
+              </View>
+            );
+          }}
         />
       )}
     </ScrollView>
@@ -115,13 +139,44 @@ export default function StudentAttendanceScreen(_props: Props) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: "#fff" },
+  wrap: { flex: 1, backgroundColor: "#f1f5f9" },
   inner: { padding: 16, paddingBottom: 40 },
-  tableHead: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#cbd5e0", paddingVertical: 8 },
-  th: { fontWeight: "700", color: "#2d3748" },
-  tableRow: { flexDirection: "row", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#edf2f7" },
-  td: { color: "#4a5568" },
-  colDate: { flex: 2 },
-  colStat: { flex: 1 },
-  empty: { color: "#718096", marginTop: 16, textAlign: "center" },
+  hero: { marginBottom: 12 },
+  heroTitle: { fontSize: 22, fontWeight: "800", color: "#0f172a" },
+  heroSub: { marginTop: 6, fontSize: 14, color: "#64748b", lineHeight: 20 },
+  panel: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  cardRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  dateCol: { flex: 1, paddingRight: 12 },
+  dateLabel: { fontSize: 12, fontWeight: "600", color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.6 },
+  dateValue: { marginTop: 4, fontSize: 16, fontWeight: "700", color: "#0f172a" },
+  badge: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    minWidth: 52,
+    alignItems: "center",
+  },
+  badgeTxt: { fontWeight: "800", fontSize: 14 },
+  empty: { textAlign: "center", color: "#64748b", marginTop: 24, lineHeight: 20 },
 });

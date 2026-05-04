@@ -1,4 +1,5 @@
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@expo/vector-icons";
+import { createDrawerNavigator } from "@react-navigation/drawer";
 import React from "react";
 import StudentAttendanceScreen from "../screens/StudentAttendanceScreen";
 import StudentCoursesListScreen from "../screens/StudentCoursesListScreen";
@@ -8,49 +9,50 @@ import StudentRegisterCourseScreen from "../screens/StudentRegisterCourseScreen"
 import StudentSettingsScreen from "../screens/StudentSettingsScreen";
 import type { StudentTabParamList } from "./types";
 
-const Tab = createBottomTabNavigator<StudentTabParamList>();
+const Drawer = createDrawerNavigator<StudentTabParamList>();
+
+function studentIcon(name: keyof StudentTabParamList) {
+  const map: Record<keyof StudentTabParamList, keyof typeof Ionicons.glyphMap> = {
+    StudentOverview: "person-circle-outline",
+    StudentCourses: "library-outline",
+    StudentRegister: "add-circle-outline",
+    StudentMarks: "bar-chart-outline",
+    StudentAttendance: "calendar-outline",
+    StudentSettings: "settings-outline",
+  };
+  return map[name];
+}
 
 export default function StudentTabNavigator() {
   return (
-    <Tab.Navigator
-      screenOptions={{
-        tabBarActiveTintColor: "#1a365d",
-        tabBarInactiveTintColor: "#718096",
+    <Drawer.Navigator
+      defaultStatus="closed"
+      screenOptions={({ route }) => ({
+        drawerPosition: "left",
+        drawerType: "front",
+        overlayColor: "rgba(15, 23, 42, 0.28)",
+        swipeEdgeWidth: 90,
+        drawerActiveTintColor: "#1d4ed8",
+        drawerInactiveTintColor: "#475569",
+        drawerActiveBackgroundColor: "#dbeafe",
+        drawerItemStyle: { borderRadius: 10, marginHorizontal: 8 },
+        drawerLabelStyle: { marginLeft: -10, fontWeight: "600", fontSize: 14 },
+        drawerStyle: { width: 280, backgroundColor: "#f8fafc", borderRightWidth: 1, borderRightColor: "#e2e8f0" },
+        sceneStyle: { backgroundColor: "#ffffff" },
         headerTintColor: "#1a365d",
-        headerTitleStyle: { fontWeight: "600" },
-        tabBarLabelStyle: { fontSize: 10 },
-      }}
+        headerTitleStyle: { fontWeight: "700" },
+        headerStyle: { backgroundColor: "#f8fafc" },
+        drawerIcon: ({ color, size }) => (
+          <Ionicons name={studentIcon(route.name as keyof StudentTabParamList)} color={color} size={size} />
+        ),
+      })}
     >
-      <Tab.Screen
-        name="StudentOverview"
-        component={StudentHomeScreen}
-        options={{ title: "Profile", tabBarLabel: "Me" }}
-      />
-      <Tab.Screen
-        name="StudentCourses"
-        component={StudentCoursesListScreen}
-        options={{ title: "My courses", tabBarLabel: "Courses" }}
-      />
-      <Tab.Screen
-        name="StudentRegister"
-        component={StudentRegisterCourseScreen}
-        options={{ title: "Register", tabBarLabel: "Join" }}
-      />
-      <Tab.Screen
-        name="StudentMarks"
-        component={StudentMarksScreen}
-        options={{ title: "Marks", tabBarLabel: "Marks" }}
-      />
-      <Tab.Screen
-        name="StudentAttendance"
-        component={StudentAttendanceScreen}
-        options={{ title: "Attendance", tabBarLabel: "Attend" }}
-      />
-      <Tab.Screen
-        name="StudentSettings"
-        component={StudentSettingsScreen}
-        options={{ title: "Settings", tabBarLabel: "Edit" }}
-      />
-    </Tab.Navigator>
+      <Drawer.Screen name="StudentOverview" component={StudentHomeScreen} options={{ title: "Profile" }} />
+      <Drawer.Screen name="StudentCourses" component={StudentCoursesListScreen} options={{ title: "My courses" }} />
+      <Drawer.Screen name="StudentRegister" component={StudentRegisterCourseScreen} options={{ title: "Register" }} />
+      <Drawer.Screen name="StudentMarks" component={StudentMarksScreen} options={{ title: "Marks" }} />
+      <Drawer.Screen name="StudentAttendance" component={StudentAttendanceScreen} options={{ title: "Attendance" }} />
+      <Drawer.Screen name="StudentSettings" component={StudentSettingsScreen} options={{ title: "Settings" }} />
+    </Drawer.Navigator>
   );
 }

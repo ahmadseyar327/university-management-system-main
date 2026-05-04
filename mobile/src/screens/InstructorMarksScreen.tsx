@@ -1,4 +1,4 @@
-import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
+import type { DrawerScreenProps } from "@react-navigation/drawer";
 import React, { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { courseEndpoints, instructorEndpoints } from "../api/endpoints";
@@ -21,7 +21,7 @@ type Stud = Record<string, unknown> & {
   rollNumber?: unknown;
 };
 
-type Props = BottomTabScreenProps<InstructorTabParamList, "InstructorMarks">;
+type Props = DrawerScreenProps<InstructorTabParamList, "InstructorMarks">;
 
 export default function InstructorMarksScreen(_props: Props) {
   const { instructorData } = useAuth();
@@ -173,7 +173,11 @@ export default function InstructorMarksScreen(_props: Props) {
   if (loading) return <LoadingView />;
 
   return (
-    <ScrollView style={styles.wrap} contentContainerStyle={styles.inner}>
+    <ScrollView style={styles.wrap} contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
+      <View style={styles.hero}>
+        <Text style={styles.heroTitle}>Marks</Text>
+        <Text style={styles.heroSub}>Post new marks or load and update an existing activity.</Text>
+      </View>
       <View style={styles.modeRow}>
         <Pressable
           style={[styles.modeBtn, mode === "post" && styles.modeOn, { marginRight: 6 }]}
@@ -185,20 +189,24 @@ export default function InstructorMarksScreen(_props: Props) {
           <Text style={[styles.modeTxt, mode === "view" && styles.modeTxtOn]}>View / update</Text>
         </Pressable>
       </View>
-      <SimpleSelect label="Course" options={courseOpts} value={course} onChange={setCourse} />
-      <SimpleSelect label="Exam type" options={examOpts} value={examType} onChange={setExamType} />
-      <FormTextInput label="Activity number" value={activityNumber} onChangeText={setActivityNumber} keyboardType="numeric" />
+      <View style={styles.panel}>
+        <SimpleSelect label="Course" options={courseOpts} value={course} onChange={setCourse} />
+        <SimpleSelect label="Exam type" options={examOpts} value={examType} onChange={setExamType} />
+        <FormTextInput label="Activity number" value={activityNumber} onChangeText={setActivityNumber} keyboardType="numeric" />
+      </View>
       {mode === "post" && (
         <>
           <FormTextInput label="Total marks" value={totalMarks} onChangeText={setTotalMarks} keyboardType="decimal-pad" />
           <FormTextInput label="Weightage" value={weightage} onChangeText={setWeightage} keyboardType="decimal-pad" />
           {marksRows.map((m, i) => (
-            <View key={mongoId(m)} style={styles.row}>
+            <View key={mongoId(m)} style={styles.markCard}>
               <Text style={styles.roll}>{String(m.rollNumber ?? "")}</Text>
               <Text style={styles.nm}>{String(m.name)}</Text>
               <TextInput
                 style={styles.markIn}
                 keyboardType="decimal-pad"
+                placeholder="0"
+                placeholderTextColor="#94a3b8"
                 value={String(m.obtainedMarks ?? "")}
                 onChangeText={(t) => {
                   const next = [...marksRows];
@@ -227,12 +235,14 @@ export default function InstructorMarksScreen(_props: Props) {
             keyboardType="decimal-pad"
           />
           {viewMarks.map((m, i) => (
-            <View key={String(m.studentId ?? i)} style={styles.row}>
+            <View key={String(m.studentId ?? i)} style={styles.markCard}>
               <Text style={styles.roll}>{String(m.rollNumber ?? "")}</Text>
               <Text style={styles.nm}>{String(m.name ?? "")}</Text>
               <TextInput
                 style={styles.markIn}
                 keyboardType="decimal-pad"
+                placeholder="0"
+                placeholderTextColor="#94a3b8"
                 value={String(m.obtainedMarks ?? m.marks ?? "")}
                 onChangeText={(t) => {
                   const next = [...viewMarks];
@@ -250,8 +260,19 @@ export default function InstructorMarksScreen(_props: Props) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: "#fff" },
+  wrap: { flex: 1, backgroundColor: "#f1f5f9" },
   inner: { padding: 16, paddingBottom: 40 },
+  hero: { marginBottom: 12 },
+  heroTitle: { fontSize: 22, fontWeight: "800", color: "#0f172a" },
+  heroSub: { marginTop: 6, fontSize: 14, color: "#64748b", lineHeight: 20 },
+  panel: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
   modeRow: { flexDirection: "row", marginBottom: 16 },
   modeBtn: {
     flex: 1,
@@ -264,16 +285,35 @@ const styles = StyleSheet.create({
   modeOn: { backgroundColor: "#1a365d", borderColor: "#1a365d" },
   modeTxt: { fontWeight: "600", color: "#4a5568" },
   modeTxtOn: { color: "#fff" },
-  row: { flexDirection: "row", alignItems: "center", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#edf2f7" },
-  roll: { width: 52, fontSize: 13, color: "#4a5568" },
-  nm: { flex: 1, fontSize: 14, color: "#1a202c" },
+  markCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  roll: { width: 52, fontSize: 13, color: "#4a5568", fontWeight: "700" },
+  nm: { flex: 1, fontSize: 14, color: "#1a202c", fontWeight: "600" },
   hint: { color: "#718096", marginBottom: 8, fontSize: 13 },
   markIn: {
     width: 64,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 6,
-    padding: 6,
+    borderColor: "#cbd5e1",
+    borderRadius: 10,
+    padding: 8,
     textAlign: "center",
+    fontWeight: "700",
+    fontSize: 15,
+    color: "#0f172a",
+    backgroundColor: "#f8fafc",
   },
 });

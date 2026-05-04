@@ -34,16 +34,16 @@ export default function AppNavigator() {
           cardStyle: { backgroundColor: "#fff" },
         }}
       >
-        <Stack.Screen name="Home" component={HomeScreen} options={{ title: "UMS" }} />
-        <Stack.Screen name="StudentLogin" component={StudentLoginScreen} options={{ title: "Student" }} />
-        <Stack.Screen name="StudentSignup" component={StudentSignupScreen} options={{ title: "Student sign up" }} />
+        <Stack.Screen name="Home" component={HomeScreen} options={{ title: "University MIS" }} />
+        <Stack.Screen name="StudentLogin" component={StudentLoginScreen} options={{ title: "Sign in" }} />
+        <Stack.Screen name="StudentSignup" component={StudentSignupScreen} options={{ title: "Create account" }} />
         <Stack.Screen
           name="InstructorLogin"
           component={InstructorLoginScreen}
-          options={{ title: "Instructor" }}
+          options={{ title: "Sign in" }}
         />
-        <Stack.Screen name="AdminLogin" component={AdminLoginScreen} options={{ title: "Admin" }} />
-        <Stack.Screen name="AdminSignup" component={AdminSignupScreen} options={{ title: "Admin sign up" }} />
+        <Stack.Screen name="AdminLogin" component={AdminLoginScreen} options={{ title: "Sign in" }} />
+        <Stack.Screen name="AdminSignup" component={AdminSignupScreen} options={{ title: "Create account" }} />
         <Stack.Screen
           name="StudentTabs"
           component={StudentTabNavigator}

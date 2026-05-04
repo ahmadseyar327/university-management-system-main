@@ -1,11 +1,11 @@
-import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
+import type { DrawerScreenProps } from "@react-navigation/drawer";
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
 import type { RootStackParamList, StudentTabParamList } from "../navigation/types";
 import { mongoId } from "../utils/mongoId";
 
-type Props = BottomTabScreenProps<StudentTabParamList, "StudentOverview">;
+type Props = DrawerScreenProps<StudentTabParamList, "StudentOverview">;
 
 function fmt(v: unknown): string {
   if (v == null) return "—";

@@ -145,12 +145,18 @@ const getSingleStudent = async (req, res) => {
 const loginStudent = async (req, res) => {
   try {
     const { email: rawEmail, rollNumber: rawRoll, password } = req.body;
-    const email =
-      typeof rawEmail === "string" ? rawEmail.trim() : rawEmail || "";
-    let rollNumber = rawRoll;
+    const email = typeof rawEmail === "string" ? rawEmail.trim() : rawEmail || "";
+    let rollNumber =
+      typeof rawRoll === "string" ? rawRoll.trim() : rawRoll;
     if (rollNumber != null && rollNumber !== "") {
       const n = Number(rollNumber);
-      rollNumber = Number.isNaN(n) ? rollNumber : n;
+      if (Number.isNaN(n)) {
+        return res.status(400).send({
+          success: false,
+          message: "Roll number must be numeric.",
+        });
+      }
+      rollNumber = n;
     }
 
     // validation

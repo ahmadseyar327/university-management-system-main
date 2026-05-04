@@ -1,9 +1,9 @@
 import type { StackNavigationProp } from "@react-navigation/stack";
 import React, { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { adminEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
-import { FormTextInput, PrimaryButton } from "../components";
+import { AuthScreenShell, FormTextInput, PrimaryButton } from "../components";
 import { useAuth } from "../contexts/AuthContext";
 import type { RootStackParamList } from "../navigation/types";
 import { toastError, toastSuccess } from "../utils/toasts";
@@ -36,14 +36,30 @@ export default function AdminLoginScreen({ navigation }: { navigation: Nav }) {
   }
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled"
+    <AuthScreenShell
+      badgeTone="admin"
+      eyebrow="Administrator"
+      title="Sign in"
+      subtitle="Manage instructors, courses, and institutional data. Same credentials as the web admin panel."
+      footer={
+        <View style={styles.footer}>
+          <Text style={styles.footerMuted}>Need an administrator account?</Text>
+          <Pressable
+            onPress={() => navigation.navigate("AdminSignup")}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Create an administrator account"
+          >
+            <Text style={styles.footerLink}>Create account</Text>
+          </Pressable>
+          <Text style={styles.footerHint}>
+            Registration creates an administrator profile. Only proceed if your institution allows self-registration.
+          </Text>
+        </View>
+      }
     >
-      <Text style={styles.title}>Admin login</Text>
       <FormTextInput
-        label="Email"
+        label="Work email"
         placeholder="Email"
         value={email}
         onChangeText={setEmail}
@@ -58,25 +74,19 @@ export default function AdminLoginScreen({ navigation }: { navigation: Nav }) {
         secureTextEntry
       />
       <PrimaryButton title="Sign in" loading={loading} onPress={() => void handleLogin()} />
-      <Text style={styles.footer}>
-        New admin?{" "}
-        <Text style={styles.link} onPress={() => navigation.navigate("AdminSignup")}>
-          Create an account
-        </Text>
-      </Text>
-    </ScrollView>
+    </AuthScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: "#fff" },
-  container: { flexGrow: 1, padding: 24, paddingTop: 48, paddingBottom: 32, backgroundColor: "#fff" },
-  title: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#1a202c",
-    marginBottom: 20,
+  footer: { marginTop: 28, alignItems: "center", paddingHorizontal: 8 },
+  footerMuted: { fontSize: 14, color: "#64748b", marginBottom: 6 },
+  footerLink: { fontSize: 16, fontWeight: "700", color: "#c2410c" },
+  footerHint: {
+    marginTop: 14,
+    fontSize: 13,
+    color: "#94a3b8",
+    textAlign: "center",
+    lineHeight: 18,
   },
-  footer: { marginTop: 24, fontSize: 15, color: "#4a5568", textAlign: "center" },
-  link: { color: "#1a365d", fontWeight: "700" },
 });

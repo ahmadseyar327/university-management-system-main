@@ -1,4 +1,4 @@
-import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
+import type { DrawerScreenProps } from "@react-navigation/drawer";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
@@ -19,7 +19,7 @@ import { toastError, toastSuccess } from "../utils/toasts";
 
 type Row = Record<string, unknown>;
 
-type Props = BottomTabScreenProps<InstructorTabParamList, "InstructorCourses">;
+type Props = DrawerScreenProps<InstructorTabParamList, "InstructorCourses">;
 
 export default function InstructorCoursesScreen(_props: Props) {
   const { instructorData } = useAuth();
