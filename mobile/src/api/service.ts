@@ -49,6 +49,9 @@ export async function fetchResponse<T = unknown>(
 
   try {
     const res = await fetch(url, options);
+    if (res.status === 204) {
+      return { success: true, message: "", data: [] as unknown as T };
+    }
     const text = await res.text();
     let jsonData: ApiResponse<T>;
     try {
@@ -59,10 +62,10 @@ export async function fetchResponse<T = unknown>(
         message: text || `Invalid response from server (HTTP ${res.status})`,
       };
     }
-    if (!res.ok && jsonData.success !== false) {
+    if (!res.ok && jsonData.success === undefined) {
       jsonData = { ...jsonData, success: false };
     }
-    if (!res.ok && !jsonData.message) {
+    if (!res.ok && jsonData.success === false && !jsonData.message) {
       jsonData = {
         ...jsonData,
         message: `Request failed (HTTP ${res.status}). Check API URL matches the server your web app uses.`,

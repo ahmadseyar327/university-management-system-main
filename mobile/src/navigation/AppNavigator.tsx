@@ -1,14 +1,14 @@
 import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import React from "react";
-import AdminHomeScreen from "../screens/AdminHomeScreen";
 import AdminLoginScreen from "../screens/AdminLoginScreen";
 import AdminSignupScreen from "../screens/AdminSignupScreen";
 import HomeScreen from "../screens/HomeScreen";
-import InstructorHomeScreen from "../screens/InstructorHomeScreen";
 import InstructorLoginScreen from "../screens/InstructorLoginScreen";
 import StudentLoginScreen from "../screens/StudentLoginScreen";
 import StudentSignupScreen from "../screens/StudentSignupScreen";
+import AdminTabNavigator from "./AdminTabNavigator";
+import InstructorTabNavigator from "./InstructorTabNavigator";
 import StudentTabNavigator from "./StudentTabNavigator";
 import type { RootStackParamList } from "./types";
 
@@ -49,8 +49,12 @@ export default function AppNavigator() {
           component={StudentTabNavigator}
           options={{ title: "Student", headerShown: false }}
         />
-        <Stack.Screen name="InstructorHome" component={InstructorHomeScreen} options={{ title: "Instructor" }} />
-        <Stack.Screen name="AdminHome" component={AdminHomeScreen} options={{ title: "Admin" }} />
+        <Stack.Screen
+          name="InstructorTabs"
+          component={InstructorTabNavigator}
+          options={{ title: "Instructor", headerShown: false }}
+        />
+        <Stack.Screen name="AdminTabs" component={AdminTabNavigator} options={{ title: "Admin", headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

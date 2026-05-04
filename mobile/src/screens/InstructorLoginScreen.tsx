@@ -33,7 +33,7 @@ export default function InstructorLoginScreen({
       }
       setInstructorData(res.data as Record<string, unknown>);
       toastSuccess(res.message ?? "Signed in");
-      navigation.reset({ index: 0, routes: [{ name: "InstructorHome" }] });
+      navigation.reset({ index: 0, routes: [{ name: "InstructorTabs" }] });
     } finally {
       setLoading(false);
     }

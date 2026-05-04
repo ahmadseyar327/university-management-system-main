@@ -1,6 +1,28 @@
 export type StudentTabParamList = {
   StudentOverview: undefined;
-  StudentMore: undefined;
+  StudentCourses: undefined;
+  StudentRegister: undefined;
+  StudentMarks: undefined;
+  StudentAttendance: undefined;
+  StudentSettings: undefined;
+};
+
+export type InstructorTabParamList = {
+  InstructorOverview: undefined;
+  InstructorCourses: undefined;
+  InstructorStudents: undefined;
+  InstructorAttendance: undefined;
+  InstructorMarks: undefined;
+  InstructorSettings: undefined;
+};
+
+export type AdminTabParamList = {
+  AdminOverview: undefined;
+  AdminInstructors: undefined;
+  AdminRegInstructor: undefined;
+  AdminCourses: undefined;
+  AdminRegCourse: undefined;
+  AdminSettings: undefined;
 };
 
 export type RootStackParamList = {
@@ -11,6 +33,6 @@ export type RootStackParamList = {
   AdminLogin: undefined;
   AdminSignup: undefined;
   StudentTabs: undefined;
-  InstructorHome: undefined;
-  AdminHome: undefined;
+  InstructorTabs: undefined;
+  AdminTabs: undefined;
 };

@@ -29,7 +29,7 @@ export default function AdminLoginScreen({ navigation }: { navigation: Nav }) {
       }
       setAdminData(res.data as Record<string, unknown>);
       toastSuccess(res.message ?? "Signed in");
-      navigation.reset({ index: 0, routes: [{ name: "AdminHome" }] });
+      navigation.reset({ index: 0, routes: [{ name: "AdminTabs" }] });
     } finally {
       setLoading(false);
     }

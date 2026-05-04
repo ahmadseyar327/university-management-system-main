@@ -51,7 +51,7 @@ export default function HomeScreen({ navigation }: { navigation: Nav }) {
           {instructorData && (
             <Pressable
               style={styles.primaryBtn}
-              onPress={() => navigation.navigate("InstructorHome")}
+              onPress={() => navigation.navigate("InstructorTabs")}
             >
               <Text style={styles.primaryBtnText}>Continue as instructor</Text>
             </Pressable>
@@ -59,7 +59,7 @@ export default function HomeScreen({ navigation }: { navigation: Nav }) {
           {adminData && (
             <Pressable
               style={styles.primaryBtn}
-              onPress={() => navigation.navigate("AdminHome")}
+              onPress={() => navigation.navigate("AdminTabs")}
             >
               <Text style={styles.primaryBtnText}>Continue as admin</Text>
             </Pressable>
