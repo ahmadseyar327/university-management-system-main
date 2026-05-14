@@ -2,7 +2,6 @@ import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import React from "react";
 import AdminLoginScreen from "../screens/AdminLoginScreen";
-import AdminSignupScreen from "../screens/AdminSignupScreen";
 import HomeScreen from "../screens/HomeScreen";
 import InstructorLoginScreen from "../screens/InstructorLoginScreen";
 import StudentLoginScreen from "../screens/StudentLoginScreen";
@@ -43,7 +42,6 @@ export default function AppNavigator() {
           options={{ title: "Sign in" }}
         />
         <Stack.Screen name="AdminLogin" component={AdminLoginScreen} options={{ title: "Sign in" }} />
-        <Stack.Screen name="AdminSignup" component={AdminSignupScreen} options={{ title: "Create account" }} />
         <Stack.Screen
           name="StudentTabs"
           component={StudentTabNavigator}

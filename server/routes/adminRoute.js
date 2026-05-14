@@ -1,6 +1,5 @@
 const express = require("express");
 const {
-  registerAdmin,
   getAdmins,
   getSingleAdmin,
   editAdmin,
@@ -10,7 +9,6 @@ const {
 
 const router = express.Router();
 
-router.post("/register", registerAdmin);
 router.get("/getAll", getAdmins);
 router.get("/get/:id", getSingleAdmin);
 router.post("/login", loginAdmin);

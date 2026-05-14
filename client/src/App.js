@@ -10,7 +10,6 @@ import InstructorLogin from "./pages/instructor/InstructorLogin";
 import StudentLogin from "./pages/student/StudentLogin";
 import StudentSignup from "./pages/student/StudentSignup";
 import AdminLogin from "./pages/admin/AdminLogin";
-import AdminSignup from "./pages/admin/AdminSignup";
 import ViewAndActionInstructor from "./pages/admin/instructor/ViewAndActionInstructor";
 import RegisterInstructor from "./pages/admin/instructor/RegisterInstructor";
 import ViewAndActionCourse from "./pages/admin/course/ViewAndActionCourse";
@@ -132,7 +131,6 @@ export default function App() {
             element={adminData ? <AdminSettings /> : <AdminLogin />}
           />
           <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin/signup" element={<AdminSignup />} />
           
           <Route path="*" element={<ErrorPage />} />
         </Routes>

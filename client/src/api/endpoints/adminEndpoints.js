@@ -5,8 +5,6 @@ const title = "admin/";
 export const adminEndpoints = {
   loginAdmin: () => `${process.env.REACT_APP_API_URL}${title}login`,
 
-  registerAdmin: () => `${process.env.REACT_APP_API_URL}${title}register`,
-
   getAdmins: () => `${process.env.REACT_APP_API_URL}${title}getAll`,
 
   getSingleAdmin: (id) => `${process.env.REACT_APP_API_URL}${title}get/${id}`,

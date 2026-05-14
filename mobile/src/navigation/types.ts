@@ -32,7 +32,6 @@ export type RootStackParamList = {
   StudentSignup: undefined;
   InstructorLogin: undefined;
   AdminLogin: undefined;
-  AdminSignup: undefined;
   StudentTabs: undefined;
   InstructorTabs: undefined;
   AdminTabs: undefined;

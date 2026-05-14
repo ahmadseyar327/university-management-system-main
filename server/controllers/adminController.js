@@ -1,75 +1,5 @@
 const adminSchema = require("../models/adminModel");
 
-const registerAdmin = async (req, res) => {
-  try {
-    const fname = typeof req.body.fname === "string" ? req.body.fname.trim() : "";
-    const lname = typeof req.body.lname === "string" ? req.body.lname.trim() : "";
-    const email = typeof req.body.email === "string" ? req.body.email.trim() : "";
-    const password = req.body.password;
-
-    // validation
-    switch (true) {
-      case !fname:
-        return res.status(400).send({
-          success: false,
-          message: "First name is mandatory!",
-        });
-      case !lname:
-        return res.status(400).send({
-          success: false,
-          message: "Last name is mandatory!",
-        });
-      case !email:
-        return res.status(400).send({
-          success: false,
-          message: "Email is mandatory!",
-        });
-      case password == null || password === "":
-        return res.status(400).send({
-          success: false,
-          message: "Password is mandatory!",
-        });
-      default:
-        break;
-    }
-
-    // ensuring uniqueness
-    const adminExists = await adminSchema.find({ email });
-    if (adminExists.length) {
-      return res.status(400).send({
-        success: false,
-        message: `We already have an admin named ${
-          adminExists[0].fname + " " + adminExists[0].lname
-        } against this email.`,
-      });
-    }
-
-    // registration
-    const newAdmin = new adminSchema({ fname, lname, email, password });
-    const result = await newAdmin.save();
-
-    if (result) {
-      res.status(200).send({
-        success: true,
-        message: "Admin registered successfully!",
-        data: newAdmin,
-      });
-    } else {
-      res.status(500).send({
-        success: false,
-        message: "Something went wrong while registering the admin.",
-        error,
-      });
-    }
-  } catch (error) {
-    res.status(500).send({
-      success: false,
-      message: "Something went wrong while registering the admin.",
-      error,
-    });
-  }
-};
-
 const getAdmins = async (req, res) => {
   try {
     const admins = await adminSchema.find();
@@ -268,4 +198,4 @@ const deleteAdmin = async (req, res) => {
   }
 };
 
-module.exports = { registerAdmin, getAdmins, getSingleAdmin, loginAdmin, editAdmin, deleteAdmin };
+module.exports = { getAdmins, getSingleAdmin, loginAdmin, editAdmin, deleteAdmin };
