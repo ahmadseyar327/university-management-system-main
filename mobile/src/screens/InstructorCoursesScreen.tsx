@@ -13,58 +13,46 @@ import {
 } from "react-native";
 import { courseEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
-import { EmptyState, SlideOverDetail } from "../components";
+import { EmptyState, ScreenContainer, ScreenHeader } from "../components";
 import LoadingView from "../components/LoadingView";
 import { useAuth } from "../contexts/AuthContext";
 import type { InstructorTabParamList } from "../navigation/types";
-import { colors, radius, roleThemes, spacing } from "../theme";
+import { colors, radius, shadow, spacing } from "../theme";
 import { listStyles } from "../theme/listStyles";
 import { mongoId } from "../utils/mongoId";
 import { toastError, toastSuccess } from "../utils/toasts";
 
-type Row = Record<string, unknown>;
-type OfferedRow = Row & { status?: string; requestId?: string };
+type OfferedRow = Record<string, unknown> & {
+  status?: string;
+  requestId?: string;
+};
 
 type Props = DrawerScreenProps<InstructorTabParamList, "InstructorCourses">;
 
-function titleOf(row: Row) {
+function titleOf(row: OfferedRow) {
   return String(row.title ?? "Untitled course");
-}
-
-function statusOf(row: OfferedRow): "approved" | "pending" | "declined" {
-  const s = String(row.status ?? "approved").toLowerCase();
-  if (s === "pending" || s === "declined") return s;
-  return "approved";
 }
 
 export default function InstructorCoursesScreen(_props: Props) {
   const { instructorData } = useAuth();
   const instructorId = mongoId(instructorData);
-  const [offered, setOffered] = useState<OfferedRow[]>([]);
-  const [catalog, setCatalog] = useState<Row[]>([]);
+  const [courses, setCourses] = useState<OfferedRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [detail, setDetail] = useState<Row | null>(null);
-  const [requestingId, setRequestingId] = useState("");
+  const [busyId, setBusyId] = useState("");
   const firstFocus = useRef(true);
 
   const load = useCallback(async () => {
-    const [r1, r2] = await Promise.all([
-      fetchResponse(courseEndpoints.getCoursesOfInstructor(instructorId), 0, null),
-      fetchResponse(courseEndpoints.getCourses(), 0, null),
-    ]);
-    if (r1?.success) {
-      const d = (r1.data as OfferedRow[]) ?? [];
-      setOffered([...d].sort((a, b) => String(a.title).localeCompare(String(b.title))));
+    const res = await fetchResponse(
+      courseEndpoints.getCoursesOfInstructor(instructorId),
+      0,
+      null
+    );
+    if (res?.success) {
+      setCourses((res.data as OfferedRow[]) ?? []);
     } else {
-      toastError(r1?.message ?? "Could not load your courses");
-      setOffered([]);
-    }
-    if (r2?.success) {
-      const d = (r2.data as Row[]) ?? [];
-      setCatalog([...d].sort((a, b) => String(a.title).localeCompare(String(b.title))));
-    } else {
-      setCatalog([]);
+      toastError(res?.message ?? "Could not load courses");
+      setCourses([]);
     }
   }, [instructorId]);
 
@@ -91,168 +79,157 @@ export default function InstructorCoursesScreen(_props: Props) {
     setRefreshing(false);
   }
 
-  const statusMap = useMemo(() => {
-    const map = new Map<string, "approved" | "pending" | "declined">();
-    for (const o of offered) {
-      map.set(mongoId(o), statusOf(o));
-    }
-    return map;
-  }, [offered]);
+  const pending = useMemo(
+    () => courses.filter((c) => String(c.status).toLowerCase() === "pending"),
+    [courses]
+  );
 
-  async function requestOffer(item: Row) {
-    const courseId = mongoId(item);
-    const current = statusMap.get(courseId);
-    if (current === "approved") {
-      toastSuccess("You already teach this course.");
-      return;
-    }
-    if (current === "pending") {
-      toastSuccess("Request already pending admin approval.");
-      return;
-    }
+  const active = useMemo(
+    () =>
+      courses
+        .filter((c) => String(c.status).toLowerCase() === "approved")
+        .sort((a, b) => titleOf(a).localeCompare(titleOf(b))),
+    [courses]
+  );
 
-    setRequestingId(courseId);
-    const res = await fetchResponse(courseEndpoints.offerCourse(), 1, {
+  async function review(offerId: string, action: "approve" | "decline") {
+    setBusyId(offerId);
+    const res = await fetchResponse(courseEndpoints.instructorReviewOffer(offerId), 2, {
       instructorId,
-      courseId,
+      action,
     });
-    setRequestingId("");
-
+    setBusyId("");
     if (!res?.success) {
-      toastError(res?.message ?? "Could not send request");
+      toastError(res?.message ?? "Could not update offer");
       return;
     }
-    toastSuccess(res.message ?? "Offer request sent to admin.");
+    toastSuccess(res.message ?? (action === "approve" ? "Accepted" : "Declined"));
     await load();
   }
 
-  const listRows = useMemo(
-    () =>
-      catalog.map((c) => ({
-        ...c,
-        __status: statusMap.get(mongoId(c)) ?? null,
-      })),
-    [catalog, statusMap]
-  );
-
-  if (loading && catalog.length === 0) return <LoadingView />;
+  if (loading && courses.length === 0) return <LoadingView />;
 
   return (
-    <View style={listStyles.screen}>
+    <ScreenContainer>
+      <ScreenHeader
+        title="My courses"
+        subtitle="Accept admin offers, then view your active teaching assignments."
+      />
+
+      {pending.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Course offers</Text>
+          {pending.map((item) => {
+            const id = String(item.requestId ?? "");
+            return (
+              <View key={id} style={[styles.offerCard, shadow.soft]}>
+                <Text style={styles.offerTitle}>{titleOf(item)}</Text>
+                <Text style={styles.offerSub}>
+                  {String(item.code ?? "")} · {String(item.creditHours ?? "")} credits
+                </Text>
+                <View style={styles.offerActions}>
+                  <Pressable
+                    style={[styles.declineBtn, busyId === id && styles.btnDisabled]}
+                    disabled={busyId === id}
+                    onPress={() => void review(id, "decline")}
+                  >
+                    <Text style={styles.declineTxt}>Decline</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.acceptBtn, busyId === id && styles.btnDisabled]}
+                    disabled={busyId === id}
+                    onPress={() => void review(id, "approve")}
+                  >
+                    {busyId === id ? (
+                      <ActivityIndicator color={colors.textInverse} />
+                    ) : (
+                      <Text style={styles.acceptTxt}>Accept</Text>
+                    )}
+                  </Pressable>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
+
+      <Text style={styles.sectionTitle}>Active courses</Text>
       <FlatList
-        data={listRows}
+        data={active}
         keyExtractor={(item, i) => mongoId(item) || String(i)}
+        scrollEnabled={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.instructor} colors={[colors.instructor]} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.instructor}
+            colors={[colors.instructor]}
+          />
         }
         contentContainerStyle={listStyles.list}
-        ListHeaderComponent={<Text style={styles.header}>Courses catalog</Text>}
         ListEmptyComponent={
-          <View style={listStyles.emptyWrap}>
-            <EmptyState icon="library-outline" title="No courses found." />
-          </View>
+          <EmptyState
+            icon="library-outline"
+            title="No active courses yet."
+            message={
+              pending.length
+                ? "Accept a course offer above to get started."
+                : "An administrator will send you course offers."
+            }
+          />
         }
         ItemSeparatorComponent={() => <View style={listStyles.sep} />}
         renderItem={({ item }) => (
-          <Pressable
-            style={({ pressed }) => [listStyles.row, pressed && listStyles.rowPressed]}
-            onPress={() => setDetail(item)}
-            android_ripple={{ color: colors.border }}
-          >
-            <View style={styles.rowLeft}>
-              <Text style={listStyles.rowName} numberOfLines={1}>
-                {titleOf(item)}
-              </Text>
-              {item.__status === "approved" ? (
-                <Text style={styles.approvedTag}>Assigned to you</Text>
-              ) : item.__status === "pending" ? (
-                <Text style={styles.pendingTag}>Pending admin approval</Text>
-              ) : null}
+          <View style={listStyles.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={listStyles.rowName}>{titleOf(item)}</Text>
+              <Text style={styles.codeTag}>{String(item.code ?? "")}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.instructor} />
-          </Pressable>
+            <Ionicons name="checkmark-circle" size={22} color={colors.instructor} />
+          </View>
         )}
       />
-
-      <SlideOverDetail open={detail !== null} onClosed={() => setDetail(null)}>
-        {detail ? (
-          <>
-            <Text style={listStyles.detailEyebrow}>Course</Text>
-            <Text style={listStyles.detailTitle}>{titleOf(detail)}</Text>
-            <View style={listStyles.detailCard}>
-              <Text style={listStyles.k}>Code</Text>
-              <Text style={listStyles.v}>{String(detail.code ?? "—")}</Text>
-              <View style={listStyles.divider} />
-              <Text style={listStyles.k}>Type</Text>
-              <Text style={listStyles.v}>{String(detail.type ?? "—")}</Text>
-              <View style={listStyles.divider} />
-              <Text style={listStyles.k}>Credit hours</Text>
-              <Text style={listStyles.v}>{String(detail.creditHours ?? "—")}</Text>
-              <View style={listStyles.divider} />
-              <Text style={listStyles.k}>Fee</Text>
-              <Text style={listStyles.v}>{String(detail.fee ?? "—")}</Text>
-            </View>
-            {statusMap.get(mongoId(detail)) === "approved" ? (
-              <View style={styles.approvedBtn}>
-                <Text style={styles.approvedTxt}>Assigned to you</Text>
-              </View>
-            ) : statusMap.get(mongoId(detail)) === "pending" ? (
-              <View style={styles.pendingBtn}>
-                <Text style={styles.pendingTxt}>Request pending approval</Text>
-              </View>
-            ) : (
-              <Pressable
-                style={styles.primaryBtn}
-                disabled={requestingId === mongoId(detail)}
-                onPress={() => void requestOffer(detail)}
-              >
-                {requestingId === mongoId(detail) ? (
-                  <ActivityIndicator color={colors.textInverse} />
-                ) : (
-                  <Text style={styles.primaryTxt}>Request to teach this course</Text>
-                )}
-              </Pressable>
-            )}
-          </>
-        ) : null}
-      </SlideOverDetail>
-    </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    paddingBottom: spacing.sm,
-    color: colors.textSecondary,
-    fontWeight: "700",
+  section: { marginBottom: spacing.lg },
+  sectionTitle: {
     fontSize: 14,
+    fontWeight: "700",
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
   },
-  rowLeft: { flex: 1, marginRight: 10 },
-  approvedTag: { marginTop: 6, color: colors.instructor, fontSize: 12, fontWeight: "700" },
-  pendingTag: { marginTop: 6, color: colors.warning, fontSize: 12, fontWeight: "700" },
-  primaryBtn: {
-    backgroundColor: roleThemes.instructor.accent,
-    borderRadius: radius.md,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  primaryTxt: { color: colors.textInverse, fontWeight: "700", fontSize: 16 },
-  approvedBtn: {
-    backgroundColor: roleThemes.instructor.accentSoft,
-    borderRadius: radius.md,
-    paddingVertical: 14,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.instructor,
-  },
-  approvedTxt: { color: colors.instructor, fontWeight: "700", fontSize: 16 },
-  pendingBtn: {
+  offerCard: {
     backgroundColor: colors.warningSoft,
     borderRadius: radius.md,
-    paddingVertical: 14,
-    alignItems: "center",
+    padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.warning,
+    marginBottom: spacing.sm,
   },
-  pendingTxt: { color: colors.warning, fontWeight: "700", fontSize: 16 },
+  offerTitle: { fontSize: 16, fontWeight: "700", color: colors.text },
+  offerSub: { marginTop: 4, fontSize: 13, color: colors.textSecondary },
+  offerActions: { flexDirection: "row", gap: 10, marginTop: spacing.md },
+  declineBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    alignItems: "center",
+    backgroundColor: colors.surface,
+  },
+  acceptBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: radius.sm,
+    backgroundColor: colors.instructor,
+    alignItems: "center",
+  },
+  declineTxt: { color: colors.danger, fontWeight: "700" },
+  acceptTxt: { color: colors.textInverse, fontWeight: "700" },
+  btnDisabled: { opacity: 0.6 },
+  codeTag: { marginTop: 4, color: colors.instructor, fontSize: 12, fontWeight: "600" },
 });

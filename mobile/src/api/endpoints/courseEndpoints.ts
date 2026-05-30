@@ -7,10 +7,12 @@ export const courseEndpoints = {
   getCourses: () => `${getApiBaseUrl()}${title}getAll`,
   getStudentsOfInstructor: (id: string) =>
     `${getApiBaseUrl()}${title}registeredStudents/getAll/${id}`,
-  offerCourse: () => `${getApiBaseUrl()}${title}offered/register/`,
-  getOfferRequests: () => `${getApiBaseUrl()}${title}offered/requests/getAll`,
-  reviewOfferRequest: (id: string) =>
-    `${getApiBaseUrl()}${title}offered/requests/review/${id}`,
+  assignCourseToInstructor: () => `${getApiBaseUrl()}${title}offered/register/`,
+  getCourseAssignments: () => `${getApiBaseUrl()}${title}offered/assignments/getAll`,
+  deleteCourseAssignment: (id: string) =>
+    `${getApiBaseUrl()}${title}offered/assignments/delete/${id}`,
+  instructorReviewOffer: (id: string) =>
+    `${getApiBaseUrl()}${title}offered/instructor/review/${id}`,
   getCoursesOfInstructor: (id: string) =>
     `${getApiBaseUrl()}${title}offered/getAll/${id}`,
   getCoursesOfStudent: (id: string) =>

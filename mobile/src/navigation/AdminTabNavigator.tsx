@@ -55,7 +55,7 @@ export default function AdminTabNavigator() {
     >
       <Drawer.Screen name="AdminOverview" component={AdminHomeScreen} options={{ title: "Dashboard" }} />
       <Drawer.Screen name="AdminInstructors" component={AdminInstructorsListScreen} options={{ title: "Instructors" }} />
-      <Drawer.Screen name="AdminOfferRequests" component={AdminOfferRequestsScreen} options={{ title: "Offer requests" }} />
+      <Drawer.Screen name="AdminOfferRequests" component={AdminOfferRequestsScreen} options={{ title: "Offer courses" }} />
       <Drawer.Screen name="AdminRegInstructor" component={AdminRegisterInstructorScreen} options={{ title: "Register instructor" }} />
       <Drawer.Screen name="AdminCourses" component={AdminCoursesListScreen} options={{ title: "Courses" }} />
       <Drawer.Screen name="AdminRegCourse" component={AdminRegisterCourseScreen} options={{ title: "Register course" }} />

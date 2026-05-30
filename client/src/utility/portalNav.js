@@ -77,6 +77,6 @@ export const adminNavItems = [
   { label: 'Instructors', path: '/admin/instructors/action', icon: icon.instructors },
   { label: 'Register Course', path: '/admin/courses/register', icon: icon.register },
   { label: 'Courses', path: '/admin/courses/action', icon: icon.courses },
-  { label: 'Offer Requests', path: '/admin/courses/offer-requests', icon: icon.requests },
+  { label: 'Offer Courses', path: '/admin/courses/assign', icon: icon.requests },
   { label: 'Settings', path: '/admin/settings', icon: icon.settings },
 ];

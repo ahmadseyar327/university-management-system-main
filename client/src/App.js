@@ -1,7 +1,7 @@
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer } from "react-toastify";
 import React from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Home from "./pages/Home";
 import Instructor from "./pages/instructor/Instructor";
 import Student from "./pages/student/Student";
@@ -119,8 +119,12 @@ export default function App() {
             element={adminData ? <ViewAndActionCourse /> : <AdminLogin />}
           />
           <Route
-            path="/admin/courses/offer-requests"
+            path="/admin/courses/assign"
             element={adminData ? <OfferRequests /> : <AdminLogin />}
+          />
+          <Route
+            path="/admin/courses/offer-requests"
+            element={<Navigate to="/admin/courses/assign" replace />}
           />
           <Route
             path="/admin/courses/register"

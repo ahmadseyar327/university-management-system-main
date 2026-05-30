@@ -1,55 +1,71 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { DrawerScreenProps } from "@react-navigation/drawer";
 import { useFocusEffect } from "@react-navigation/native";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { courseEndpoints } from "../api/endpoints";
+import { courseEndpoints, instructorEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
-import { EmptyState, ScreenContainer, ScreenHeader, SlideOverDetail } from "../components";
+import { EmptyState, ScreenContainer, ScreenHeader } from "../components";
 import LoadingView from "../components/LoadingView";
 import { useAuth } from "../contexts/AuthContext";
 import type { AdminTabParamList } from "../navigation/types";
 import { colors, radius, shadow, spacing } from "../theme";
-import { listStyles } from "../theme/listStyles";
 import { mongoId } from "../utils/mongoId";
 import { toastError, toastSuccess } from "../utils/toasts";
 
-type ReqRow = Record<string, unknown>;
+type OfferRow = Record<string, unknown>;
 type Props = DrawerScreenProps<AdminTabParamList, "AdminOfferRequests">;
+
+function initials(row: Record<string, unknown>) {
+  return `${String(row.fname ?? "").charAt(0)}${String(row.lname ?? "").charAt(0)}`.toUpperCase();
+}
 
 export default function AdminOfferRequestsScreen(_props: Props) {
   const { adminData } = useAuth();
   const adminId = mongoId(adminData);
-  const [rows, setRows] = useState<ReqRow[]>([]);
+  const [instructors, setInstructors] = useState<Record<string, unknown>[]>([]);
+  const [courses, setCourses] = useState<Record<string, unknown>[]>([]);
+  const [offers, setOffers] = useState<OfferRow[]>([]);
+  const [instructorId, setInstructorId] = useState("");
+  const [courseId, setCourseId] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [busyId, setBusyId] = useState("");
-  const [detail, setDetail] = useState<ReqRow | null>(null);
+  const [sending, setSending] = useState(false);
   const firstFocus = useRef(true);
 
-  const load = useCallback(async () => {
-    const res = await fetchResponse(courseEndpoints.getOfferRequests(), 0, null);
-    if (!res?.success) {
-      setRows([]);
-      return;
-    }
-    const data = (res.data as ReqRow[]) ?? [];
-    setRows(
-      [...data].sort(
-        (a, b) =>
-          new Date(String(b.createdAt ?? "")).getTime() -
-          new Date(String(a.createdAt ?? "")).getTime()
-      )
-    );
+  const loadOffers = useCallback(async () => {
+    const res = await fetchResponse(courseEndpoints.getCourseAssignments(), 0, null);
+    setOffers(res?.success && res.data ? (res.data as OfferRow[]) : []);
   }, []);
+
+  const load = useCallback(async () => {
+    const [instRes, courseRes] = await Promise.all([
+      fetchResponse(instructorEndpoints.getInstructors(), 0, null),
+      fetchResponse(courseEndpoints.getCourses(), 0, null),
+      loadOffers(),
+    ]);
+    if (instRes?.success) {
+      const d = (instRes.data as Record<string, unknown>[]) ?? [];
+      setInstructors(
+        [...d].sort((a, b) =>
+          `${a.fname} ${a.lname}`.localeCompare(`${b.fname} ${b.lname}`)
+        )
+      );
+    }
+    if (courseRes?.success) {
+      const d = (courseRes.data as Record<string, unknown>[]) ?? [];
+      setCourses([...d].sort((a, b) => String(a.title).localeCompare(String(b.title))));
+    }
+  }, [loadOffers]);
 
   useFocusEffect(
     useCallback(() => {
@@ -68,157 +84,253 @@ export default function AdminOfferRequestsScreen(_props: Props) {
     }, [load])
   );
 
+  const takenIds = useMemo(() => {
+    if (!instructorId) return new Set<string>();
+    return new Set(
+      offers
+        .filter(
+          (o) =>
+            o.instructorId === instructorId &&
+            (o.status === "pending" || o.status === "approved")
+        )
+        .map((o) => String(o.courseId))
+    );
+  }, [offers, instructorId]);
+
+  const available = useMemo(
+    () => courses.filter((c) => !takenIds.has(mongoId(c))),
+    [courses, takenIds]
+  );
+
+  const pending = useMemo(() => offers.filter((o) => o.status === "pending"), [offers]);
+  const active = useMemo(() => offers.filter((o) => o.status === "approved"), [offers]);
+
   async function onRefresh() {
     setRefreshing(true);
     await load();
     setRefreshing(false);
   }
 
-  async function review(action: "approve" | "decline", row: ReqRow) {
-    const id = mongoId(row);
-    if (!id || !adminId) {
-      toastError("Missing request or admin id.");
+  async function sendOffer() {
+    if (!instructorId || !courseId) {
+      toastError("Select an instructor and a course.");
       return;
     }
-    setBusyId(id);
-    const res = await fetchResponse(courseEndpoints.reviewOfferRequest(id), 2, {
+    setSending(true);
+    const res = await fetchResponse(courseEndpoints.assignCourseToInstructor(), 1, {
       adminId,
-      action,
+      instructorId,
+      courseId,
     });
-    setBusyId("");
-
+    setSending(false);
     if (!res?.success) {
-      toastError(res?.message ?? "Could not review request");
+      toastError(res?.message ?? "Could not send offer");
       return;
     }
-    toastSuccess(res.message ?? (action === "approve" ? "Approved" : "Declined"));
-    setRows((prev) => prev.filter((x) => mongoId(x) !== id));
-    setDetail((d) => (d && mongoId(d) === id ? null : d));
+    toastSuccess(res.message ?? "Offer sent");
+    setCourseId("");
+    await loadOffers();
   }
 
-  if (loading && rows.length === 0) return <LoadingView />;
+  async function cancelOffer(row: OfferRow) {
+    const id = mongoId(row);
+    if (!id) return;
+    const res = await fetchResponse(courseEndpoints.deleteCourseAssignment(id), 3, null);
+    if (!res?.success) {
+      toastError(res?.message ?? "Could not remove");
+      return;
+    }
+    toastSuccess(res.message ?? "Removed");
+    await loadOffers();
+  }
+
+  if (loading && instructors.length === 0) return <LoadingView />;
 
   return (
-    <ScreenContainer scroll={false} contentContainerStyle={styles.container}>
+    <ScreenContainer>
       <ScreenHeader
-        title="Offer requests"
-        subtitle="Review instructor requests to teach courses."
-      />
-      <FlatList
-        data={rows}
-        keyExtractor={(item, i) => mongoId(item) || String(i)}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
-        }
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={
-          <EmptyState icon="mail-outline" title="No pending requests." message="All offer requests have been reviewed." />
-        }
-        renderItem={({ item }) => (
-          <Pressable
-            style={({ pressed }) => [styles.card, shadow.soft, pressed && styles.cardPressed]}
-            onPress={() => setDetail(item)}
-            android_ripple={{ color: colors.border }}
-          >
-            <View style={styles.cardTop}>
-              <Text style={styles.cardName} numberOfLines={1}>
-                {String(item.instructorName ?? "Unknown instructor")}
-              </Text>
-              <Ionicons name="chevron-forward" size={20} color={colors.primary} />
-            </View>
-            <Text style={styles.cardSub} numberOfLines={1}>
-              wants {String(item.courseTitle ?? "a course")}
-            </Text>
-            <View style={styles.cardMeta}>
-              <Text style={styles.metaLabel}>Course code</Text>
-              <Text style={styles.metaValue}>{String(item.courseCode ?? "—")}</Text>
-            </View>
-          </Pressable>
-        )}
+        title="Offer courses"
+        subtitle="Pick an instructor and course. They must accept before it is active."
       />
 
-      <SlideOverDetail open={detail !== null} onClosed={() => setDetail(null)}>
-        {detail ? (
-          <>
-            <Text style={listStyles.detailEyebrow}>Offer request</Text>
-            <Text style={listStyles.detailTitle}>{String(detail.instructorName ?? "Instructor")}</Text>
-            <View style={listStyles.detailCard}>
-              <Text style={listStyles.k}>Course</Text>
-              <Text style={listStyles.v}>{String(detail.courseTitle ?? "—")}</Text>
-              <View style={listStyles.divider} />
-              <Text style={listStyles.k}>Course code</Text>
-              <Text style={listStyles.v}>{String(detail.courseCode ?? "—")}</Text>
-              <View style={listStyles.divider} />
-              <Text style={listStyles.k}>Instructor email</Text>
-              <Text style={listStyles.v}>{String(detail.instructorEmail ?? "—")}</Text>
-              <View style={listStyles.divider} />
-              <Text style={listStyles.k}>Requested at</Text>
-              <Text style={listStyles.v}>{String(detail.createdAt ?? "—")}</Text>
-            </View>
-            <View style={styles.btnRow}>
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
+      >
+        <Text style={styles.step}>1. Instructor</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.hScroll}>
+          {instructors.map((inst) => {
+            const id = mongoId(inst);
+            const active = instructorId === id;
+            return (
               <Pressable
-                style={[styles.btn, styles.declineBtn]}
-                disabled={busyId === mongoId(detail)}
-                onPress={() => void review("decline", detail)}
+                key={id}
+                style={[styles.personChip, active && styles.personChipActive, shadow.soft]}
+                onPress={() => {
+                  setInstructorId(id);
+                  setCourseId("");
+                }}
               >
-                {busyId === mongoId(detail) ? (
-                  <ActivityIndicator color={colors.danger} />
-                ) : (
-                  <Text style={styles.declineTxt}>Decline</Text>
-                )}
+                <View style={[styles.avatar, active && styles.avatarActive]}>
+                  <Text style={styles.avatarTxt}>{initials(inst)}</Text>
+                </View>
+                <Text style={styles.personName} numberOfLines={1}>
+                  {String(inst.fname)} {String(inst.lname)}
+                </Text>
               </Pressable>
-              <Pressable
-                style={[styles.btn, styles.approveBtn]}
-                disabled={busyId === mongoId(detail)}
-                onPress={() => void review("approve", detail)}
-              >
-                {busyId === mongoId(detail) ? (
-                  <ActivityIndicator color={colors.textInverse} />
-                ) : (
-                  <Text style={styles.approveTxt}>Approve</Text>
-                )}
+            );
+          })}
+        </ScrollView>
+
+        <Text style={styles.step}>2. Course</Text>
+        {!instructorId ? (
+          <Text style={styles.hint}>Select an instructor first.</Text>
+        ) : available.length === 0 ? (
+          <Text style={styles.hint}>No more courses available for this instructor.</Text>
+        ) : (
+          <View style={styles.courseGrid}>
+            {available.map((c) => {
+              const id = mongoId(c);
+              const selected = courseId === id;
+              return (
+                <Pressable
+                  key={id}
+                  style={[styles.courseChip, selected && styles.courseChipActive]}
+                  onPress={() => setCourseId(id)}
+                >
+                  <Text style={styles.courseTitle} numberOfLines={2}>
+                    {String(c.title)}
+                  </Text>
+                  <Text style={styles.courseCode}>{String(c.code)}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+
+        <Pressable
+          style={[styles.sendBtn, (!instructorId || !courseId || sending) && styles.sendBtnDisabled]}
+          disabled={!instructorId || !courseId || sending}
+          onPress={() => void sendOffer()}
+        >
+          {sending ? (
+            <ActivityIndicator color={colors.textInverse} />
+          ) : (
+            <Text style={styles.sendTxt}>Send offer</Text>
+          )}
+        </Pressable>
+
+        <Text style={[styles.step, { marginTop: spacing.lg }]}>Pending ({pending.length})</Text>
+        {pending.length === 0 ? (
+          <Text style={styles.hint}>No offers awaiting instructor approval.</Text>
+        ) : (
+          pending.map((row) => (
+            <View key={mongoId(row)} style={[styles.statusRow, shadow.soft]}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.statusTitle}>{String(row.courseTitle)}</Text>
+                <Text style={styles.statusSub}>{String(row.instructorName)}</Text>
+              </View>
+              <Pressable onPress={() => void cancelOffer(row)}>
+                <Text style={styles.cancelTxt}>Cancel</Text>
               </Pressable>
             </View>
-          </>
-        ) : null}
-      </SlideOverDetail>
+          ))
+        )}
+
+        <Text style={[styles.step, { marginTop: spacing.md }]}>Active ({active.length})</Text>
+        {active.length === 0 ? (
+          <Text style={styles.hint}>No approved assignments yet.</Text>
+        ) : (
+          active.map((row) => (
+            <View key={mongoId(row)} style={[styles.statusRow, shadow.soft]}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.statusTitle}>{String(row.courseTitle)}</Text>
+                <Text style={styles.statusSub}>{String(row.instructorName)}</Text>
+              </View>
+              <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
+            </View>
+          ))
+        )}
+      </ScrollView>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingBottom: 0 },
-  list: { paddingBottom: 40, gap: spacing.sm },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.sm,
-  },
-  cardPressed: { backgroundColor: colors.primarySoft },
-  cardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  cardName: { flex: 1, fontSize: 16, fontWeight: "700", color: colors.text, marginRight: 8 },
-  cardSub: { marginTop: 4, color: colors.textSecondary, fontSize: 13 },
-  cardMeta: {
-    marginTop: spacing.sm,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-  },
-  metaLabel: {
-    fontSize: 11,
+  step: {
+    fontSize: 12,
     fontWeight: "700",
     color: colors.textMuted,
     textTransform: "uppercase",
     letterSpacing: 0.5,
+    marginBottom: spacing.sm,
   },
-  metaValue: { fontSize: 14, fontWeight: "600", color: colors.text, marginTop: 2 },
-  btnRow: { flexDirection: "row", gap: 10 },
-  btn: { flex: 1, borderRadius: radius.sm, paddingVertical: 13, alignItems: "center", justifyContent: "center" },
-  declineBtn: { backgroundColor: colors.dangerSoft, borderWidth: 1, borderColor: colors.danger },
-  approveBtn: { backgroundColor: colors.primary },
-  declineTxt: { color: colors.danger, fontWeight: "700", fontSize: 15 },
-  approveTxt: { color: colors.textInverse, fontWeight: "700", fontSize: 15 },
+  hScroll: { marginBottom: spacing.md },
+  personChip: {
+    width: 100,
+    alignItems: "center",
+    padding: spacing.sm,
+    marginRight: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  personChipActive: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 6,
+  },
+  avatarActive: { backgroundColor: colors.primary },
+  avatarTxt: { fontWeight: "700", color: colors.textInverse, fontSize: 13 },
+  personName: { fontSize: 12, fontWeight: "600", color: colors.text, textAlign: "center" },
+  hint: { color: colors.textSecondary, fontSize: 14, marginBottom: spacing.md },
+  courseGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  courseChip: {
+    width: "47%",
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  courseChipActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primarySoft,
+  },
+  courseTitle: { fontWeight: "600", fontSize: 14, color: colors.text },
+  courseCode: { fontSize: 12, color: colors.textSecondary, marginTop: 4 },
+  sendBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginBottom: spacing.md,
+  },
+  sendBtnDisabled: { opacity: 0.5 },
+  sendTxt: { color: colors.textInverse, fontWeight: "700", fontSize: 16 },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.sm,
+  },
+  statusTitle: { fontWeight: "700", fontSize: 15, color: colors.text },
+  statusSub: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+  cancelTxt: { color: colors.danger, fontWeight: "700" },
 });

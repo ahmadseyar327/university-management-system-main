@@ -14,7 +14,7 @@ export default function Admin() {
     { label: 'Manage Instructors', path: '/admin/instructors/action' },
     { label: 'Register Course', path: '/admin/courses/register' },
     { label: 'Manage Courses', path: '/admin/courses/action' },
-    { label: 'Offer Requests', path: '/admin/courses/offer-requests' },
+    { label: 'Offer Courses', path: '/admin/courses/assign' },
   ];
 
   return (
