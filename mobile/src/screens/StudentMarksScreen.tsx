@@ -3,7 +3,15 @@ import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { studentEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
-import { ActivityCard, EmptyState, ScreenContainer, ScreenHeader, SimpleSelect } from "../components";
+import {
+  ActivityCard,
+  EmptyState,
+  FadeInView,
+  MarksResultRow,
+  ScreenContainer,
+  ScreenHeader,
+  SimpleSelect,
+} from "../components";
 import type { SelectOption } from "../components/SimpleSelect";
 import LoadingView from "../components/LoadingView";
 import { useAuth } from "../contexts/AuthContext";
@@ -87,56 +95,66 @@ export default function StudentMarksScreen(_props: Props) {
     value: c.courseId,
   }));
 
+  const courseLabel = courses.find((c) => c.courseId === courseId);
+
   if (loadingMeta) return <LoadingView />;
 
   return (
     <ScreenContainer>
-      <ScreenHeader
-        title="Marks"
-        subtitle="View your marks and grades by course and exam type."
-      />
+      <ScreenHeader title="My marks" subtitle="Grades by course and exam component." />
 
-      <View style={[styles.panel, shadow.soft]}>
-        <SimpleSelect label="Course | Instructor" options={opts} value={courseId} onChange={setCourseId} />
-      </View>
+      <FadeInView>
+        <View style={[styles.panel, shadow.soft]}>
+          <Text style={styles.step}>1 · Select course</Text>
+          <SimpleSelect label="Course | Instructor" options={opts} value={courseId} onChange={setCourseId} />
+          {courseLabel ? (
+            <View style={styles.banner}>
+              <Text style={styles.bannerTxt}>📚 {courseLabel.title}</Text>
+            </View>
+          ) : null}
+        </View>
+      </FadeInView>
 
-      <Text style={styles.section}>Exam components</Text>
-
-      {examTypeList.length === 0 ? (
-        <EmptyState icon="document-text-outline" title="No exam types available." />
-      ) : (
-        examTypeList.map((exam) => {
-          const expanded = openExam === exam;
-          const rows = marksByExam[exam];
-          return (
-            <ActivityCard
-              key={exam}
-              variant="instructor"
-              header={exam}
-              isExpanded={expanded}
-              onToggle={() => {
-                setOpenExam(expanded ? null : exam);
-                if (!expanded && rows === undefined) void loadExam(exam);
-              }}
-            >
-              {loadingExam === exam ? (
-                <ActivityIndicator color={colors.instructor} />
-              ) : (rows ?? []).length === 0 ? (
-                <Text style={styles.emptyRow}>No marks recorded yet.</Text>
-              ) : (
-                (rows ?? []).map((row, idx) => (
-                  <View key={idx} style={styles.markRow}>
-                    <Text style={styles.markCell}>#{String(row.activityNumber ?? "")}</Text>
-                    <Text style={styles.markCell}>W:{String(row.weightage ?? "")}</Text>
-                    <Text style={styles.markCell}>Tot:{String(row.totalMarks ?? "")}</Text>
-                    <Text style={styles.markCell}>Got:{String(row.marks ?? "")}</Text>
-                  </View>
-                ))
-              )}
-            </ActivityCard>
-          );
-        })
-      )}
+      <FadeInView delay={80}>
+        <Text style={styles.section}>Exam results</Text>
+        {examTypeList.length === 0 ? (
+          <EmptyState icon="document-text-outline" title="No exam types available." />
+        ) : (
+          examTypeList.map((exam, idx) => {
+            const expanded = openExam === exam;
+            const rows = marksByExam[exam];
+            return (
+              <FadeInView key={exam} delay={100 + idx * 50}>
+                <ActivityCard
+                  variant="instructor"
+                  header={exam}
+                  isExpanded={expanded}
+                  onToggle={() => {
+                    setOpenExam(expanded ? null : exam);
+                    if (!expanded && rows === undefined) void loadExam(exam);
+                  }}
+                >
+                  {loadingExam === exam ? (
+                    <ActivityIndicator color={colors.instructor} style={{ paddingVertical: 16 }} />
+                  ) : (rows ?? []).length === 0 ? (
+                    <Text style={styles.emptyRow}>No marks posted yet.</Text>
+                  ) : (
+                    (rows ?? []).map((row, i) => (
+                      <MarksResultRow
+                        key={i}
+                        activityNumber={row.activityNumber}
+                        weightage={row.weightage}
+                        totalMarks={row.totalMarks}
+                        obtained={row.marks}
+                      />
+                    ))
+                  )}
+                </ActivityCard>
+              </FadeInView>
+            );
+          })
+        )}
+      </FadeInView>
     </ScreenContainer>
   );
 }
@@ -150,13 +168,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  section: { marginBottom: spacing.sm, fontWeight: "700", color: colors.text, fontSize: 15 },
-  markRow: {
-    flexDirection: "row",
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+  step: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    marginBottom: spacing.sm,
   },
-  markCell: { flex: 1, fontSize: 13, color: colors.textSecondary },
-  emptyRow: { textAlign: "center", color: colors.textSecondary, paddingVertical: spacing.sm },
+  banner: {
+    marginTop: spacing.sm,
+    padding: 10,
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  bannerTxt: { color: colors.primary, fontWeight: "600", fontSize: 13 },
+  section: { marginBottom: spacing.sm, fontWeight: "700", color: colors.text, fontSize: 15 },
+  emptyRow: { textAlign: "center", color: colors.textSecondary, paddingVertical: spacing.md },
 });

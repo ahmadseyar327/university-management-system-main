@@ -771,9 +771,31 @@ code {
   background: #dbeafe;
 }
 
+.inst-activity-chevron {
+  font-size: 1.25rem;
+  line-height: 1;
+  transition: transform 0.25s ease;
+}
+
+.inst-activity-chevron-open {
+  transform: rotate(180deg);
+}
+
 .inst-activity-body {
   padding: 1.25rem;
   border-top: 1px solid #f1f5f9;
+  animation: academics-body-in 0.35s ease-out both;
+}
+
+@keyframes academics-body-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .inst-hint {
@@ -982,6 +1004,388 @@ body.portal-sidebar-open {
 @media (min-width: 768px) and (max-width: 1023px) {
   .inst-table-wrap {
     -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Academics — marks & attendance */
+@keyframes academics-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.academics-fade-in {
+  animation: academics-fade-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.academics-filter-panel {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.875rem;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.academics-filter-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.academics-step-badge {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: #1d4ed8;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.academics-filter-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.academics-filter-sub {
+  font-size: 0.8125rem;
+  color: #64748b;
+  margin: 0.2rem 0 0;
+}
+
+.academics-session-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+  border: 1px solid #bfdbfe;
+  border-radius: 0.625rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  color: #1e40af;
+}
+
+.academics-session-banner strong {
+  font-weight: 700;
+}
+
+.academics-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border-radius: 0.625rem;
+  border: 1px solid #e2e8f0;
+}
+
+.academics-toolbar-stats {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.academics-stat {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+}
+
+.academics-stat-p { background: #dcfce7; color: #166534; }
+.academics-stat-a { background: #fee2e2; color: #991b1b; }
+.academics-stat-l { background: #ffedd5; color: #9a3412; }
+
+.academics-toolbar-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.academics-tool-btn {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 0.375rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.academics-tool-p {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #86efac;
+}
+
+.academics-tool-a {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+
+.academics-status-pills {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.academics-status-pill {
+  min-width: 2.25rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.375rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.academics-status-pill-active.academics-status-p {
+  background: #16a34a;
+  color: #fff;
+  border-color: #16a34a;
+  transform: scale(1.05);
+}
+
+.academics-status-pill-active.academics-status-a {
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
+  transform: scale(1.05);
+}
+
+.academics-status-pill-active.academics-status-l {
+  background: #d97706;
+  color: #fff;
+  border-color: #d97706;
+  transform: scale(1.05);
+}
+
+.academics-status-pill-active.academics-status-na {
+  background: #64748b;
+  color: #fff;
+  border-color: #64748b;
+}
+
+.academics-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.academics-status-badge.academics-status-p { background: #dcfce7; color: #166534; }
+.academics-status-badge.academics-status-a { background: #fee2e2; color: #991b1b; }
+.academics-status-badge.academics-status-l { background: #ffedd5; color: #9a3412; }
+.academics-status-badge.academics-status-na { background: #e2e8f0; color: #475569; }
+
+.academics-marks-grid,
+.academics-attendance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.academics-mark-card,
+.academics-attendance-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 0.875rem;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.academics-mark-card:hover,
+.academics-attendance-card:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.08);
+}
+
+.academics-mark-card-hidden {
+  opacity: 0.55;
+  background: #f8fafc;
+}
+
+.academics-mark-card-top,
+.academics-attendance-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.academics-mark-roll,
+.academics-attendance-roll {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.academics-mark-name {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 0.625rem;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.academics-mark-name-btn {
+  margin-bottom: 0.25rem;
+}
+
+.academics-mark-input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+  color: #1d4ed8;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.academics-mark-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.academics-visibility-btn {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.25rem;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.academics-marks-progress {
+  margin-bottom: 1rem;
+}
+
+.academics-marks-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-bottom: 0.35rem;
+}
+
+.academics-marks-progress-track {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.academics-marks-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1d4ed8, #3b82f6);
+  border-radius: 9999px;
+  transition: width 0.35s ease;
+}
+
+.academics-empty-state {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 0.75rem;
+  background: #f8fafc;
+}
+
+.academics-student-mark-row {
+  display: grid;
+  grid-template-columns: 3rem 1fr auto auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f1f5f9;
+  animation: academics-fade-in 0.35s ease-out both;
+}
+
+.academics-student-mark-row:last-child {
+  border-bottom: none;
+}
+
+.academics-student-mark-activity {
+  font-weight: 800;
+  color: #1d4ed8;
+  font-size: 0.9rem;
+}
+
+.academics-student-mark-meta {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.academics-student-mark-score {
+  font-weight: 800;
+  font-size: 1rem;
+  color: #1e293b;
+  text-align: right;
+}
+
+.academics-student-att-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.625rem;
+  margin-bottom: 0.5rem;
+  animation: academics-fade-in 0.35s ease-out both;
+}
+
+.academics-layout-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+@media (min-width: 1024px) {
+  .academics-layout-split {
+    display: grid;
+    grid-template-columns: minmax(280px, 340px) 1fr;
+    gap: 1.25rem;
+    align-items: start;
   }
 }
 

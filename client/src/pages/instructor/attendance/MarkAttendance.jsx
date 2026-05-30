@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import AttendanceTable from '../../../components/tables/AttendanceTable';
 import { fetchResponse } from '../../../api/service';
 import { instructorEndpoints } from '../../../api/endpoints/instructorEndpoints';
 import { toastErrorObject, toastSuccessObject } from '../../../utility/toasts';
 import { toast } from 'react-toastify';
 import PrimaryButton from '../../../components/instructor/PrimaryButton';
+import AttendanceEntryGrid from '../../../components/academics/AttendanceEntryGrid';
+import FadeInPanel from '../../../components/academics/FadeInPanel';
 
 export default function MarkAttendance({ data, date, courseId, instructorId }) {
   const [attendanceData, setAttendanceData] = useState(data);
@@ -41,24 +42,22 @@ export default function MarkAttendance({ data, date, courseId, instructorId }) {
 
   if (!courseId) {
     return (
-      <p className="inst-table-empty text-center py-8 text-gray-400">
-        Select a course to mark attendance.
-      </p>
+      <p className="academics-empty-state">Select a course and date to mark attendance.</p>
     );
   }
 
   return (
-    <>
+    <FadeInPanel>
+      <div className="academics-session-banner">
+        <span>📅</span>
+        <span>
+          Session <strong>{date}</strong> · {attendanceData.length} students
+        </span>
+      </div>
       <PrimaryButton onClick={postAttendance} className="w-full mb-4">
-        Post Attendance
+        Save attendance
       </PrimaryButton>
-      <AttendanceTable
-        variant="instructor"
-        headers={['Roll Number', 'Name', 'Status']}
-        data={attendanceData}
-        setData={setAttendanceData}
-        dataAttributes={['rollNumber', 'name', 'status']}
-      />
-    </>
+      <AttendanceEntryGrid rows={attendanceData} setRows={setAttendanceData} studentIdKey="_id" />
+    </FadeInPanel>
   );
 }

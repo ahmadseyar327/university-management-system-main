@@ -11,6 +11,8 @@ import SelectField from '../../../components/inputs/SelectField';
 import UpdateMarks from './UpdateMarks';
 import { examTypes } from '../../../utility/constants';
 import InputField from '../../../components/inputs/InputField';
+import AcademicsFilterPanel from '../../../components/academics/AcademicsFilterPanel';
+import FadeInPanel from '../../../components/academics/FadeInPanel';
 
 export default function ViewMarks() {
   const instructorId = JSON.parse(localStorage.getItem('instructor'))._id;
@@ -64,6 +66,7 @@ export default function ViewMarks() {
         );
         if (!res.success) {
           toast.error(res.message, toastErrorObject);
+          setAcademics(null);
           setIsLoading(false);
           return;
         }
@@ -91,6 +94,8 @@ export default function ViewMarks() {
       temporarySelection.activityNumber
     ) {
       fetchData();
+    } else {
+      setAcademics(null);
     }
   }, [instructorId, temporarySelection]);
 
@@ -113,55 +118,65 @@ export default function ViewMarks() {
     <InstructorLayout isLoading={isLoading}>
       <PageHeader
         title="View & Update Marks"
-        subtitle="Find and edit previously posted marks."
+        subtitle="Find a posted activity and edit marks in the same card layout."
       />
 
-      <ContentCard title="Search Criteria" subtitle="Select course and exam details">
-        <div className="inst-filter-row">
-          <SelectField
-            variant="instructor"
-            label="Course"
-            options={courseOptions}
-            value={temporarySelection.course}
-            onChange={(event) =>
-              setTemporarySelection({
-                ...temporarySelection,
-                course: event.target.value,
-              })
-            }
-          />
-          <SelectField
-            variant="instructor"
-            label="Exam Type"
-            options={examTypes?.map((exam) => ({ value: exam, title: exam }))}
-            value={temporarySelection.examType}
-            onChange={(event) =>
-              setTemporarySelection({
-                ...temporarySelection,
-                examType: event.target.value,
-              })
-            }
-          />
-          <InputField
-            variant="instructor"
-            label="Activity Number"
-            type="number"
-            value={temporarySelection.activityNumber}
-            onChange={(event) =>
-              setTemporarySelection({
-                ...temporarySelection,
-                activityNumber: event.target.value,
-              })
-            }
-            required={true}
-            min={1}
-          />
-        </div>
-      </ContentCard>
+      <div className="academics-layout-split">
+        <FadeInPanel>
+          <AcademicsFilterPanel
+            step="1"
+            title="Find activity"
+            subtitle="Course, exam type, and activity number"
+          >
+            <div className="inst-filter-grid">
+              <SelectField
+                variant="instructor"
+                label="Course"
+                options={courseOptions}
+                value={temporarySelection.course}
+                onChange={(event) =>
+                  setTemporarySelection({
+                    ...temporarySelection,
+                    course: event.target.value,
+                  })
+                }
+              />
+              <SelectField
+                variant="instructor"
+                label="Exam Type"
+                options={examTypes?.map((exam) => ({ value: exam, title: exam }))}
+                value={temporarySelection.examType}
+                onChange={(event) =>
+                  setTemporarySelection({
+                    ...temporarySelection,
+                    examType: event.target.value,
+                  })
+                }
+              />
+              <InputField
+                variant="instructor"
+                label="Activity Number"
+                type="number"
+                value={temporarySelection.activityNumber}
+                onChange={(event) =>
+                  setTemporarySelection({
+                    ...temporarySelection,
+                    activityNumber: event.target.value,
+                  })
+                }
+                required={true}
+                min={1}
+              />
+            </div>
+          </AcademicsFilterPanel>
+        </FadeInPanel>
 
-      <ContentCard title="Marks Record" className="mt-4">
-        <UpdateMarks data={academics} setData={setAcademics} />
-      </ContentCard>
+        <FadeInPanel delay={80}>
+          <ContentCard title="Marks" subtitle="Edit and save when finished">
+            <UpdateMarks data={academics} setData={setAcademics} />
+          </ContentCard>
+        </FadeInPanel>
+      </div>
     </InstructorLayout>
   );
 }

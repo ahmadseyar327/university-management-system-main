@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import AttendanceTable from '../../../components/tables/AttendanceTable';
 import { fetchResponse } from '../../../api/service';
 import { instructorEndpoints } from '../../../api/endpoints/instructorEndpoints';
 import { toast } from 'react-toastify';
 import { toastErrorObject, toastSuccessObject } from '../../../utility/toasts';
 import PrimaryButton from '../../../components/instructor/PrimaryButton';
+import AttendanceEntryGrid from '../../../components/academics/AttendanceEntryGrid';
+import FadeInPanel from '../../../components/academics/FadeInPanel';
 
 export default function UpdateAttendance({ data, attendanceWhole }) {
   const [attendanceData, setAttendanceData] = useState(data);
@@ -31,17 +32,15 @@ export default function UpdateAttendance({ data, attendanceWhole }) {
   }
 
   return (
-    <>
+    <FadeInPanel>
       <PrimaryButton onClick={updateAttendance} className="w-full mb-4">
-        Update Attendance
+        Save attendance
       </PrimaryButton>
-      <AttendanceTable
-        variant="instructor"
-        headers={['Roll Number', 'Name', 'Status']}
-        data={attendanceData}
-        setData={setAttendanceData}
-        dataAttributes={['rollNumber', 'name', 'status']}
+      <AttendanceEntryGrid
+        rows={attendanceData}
+        setRows={setAttendanceData}
+        studentIdKey="studentId"
       />
-    </>
+    </FadeInPanel>
   );
 }

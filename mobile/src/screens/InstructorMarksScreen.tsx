@@ -1,14 +1,22 @@
 import type { DrawerScreenProps } from "@react-navigation/drawer";
 import React, { useCallback, useEffect, useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 import { courseEndpoints, instructorEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
-import { FormTextInput, PrimaryButton, ScreenContainer, ScreenHeader, SimpleSelect } from "../components";
+import {
+  FadeInView,
+  FormTextInput,
+  PrimaryButton,
+  ScreenContainer,
+  ScreenHeader,
+  SegmentedTabs,
+  SimpleSelect,
+} from "../components";
 import type { SelectOption } from "../components/SimpleSelect";
-import { colors, radius, roleThemes, shadow, spacing } from "../theme";
 import LoadingView from "../components/LoadingView";
 import { useAuth } from "../contexts/AuthContext";
 import type { InstructorTabParamList } from "../navigation/types";
+import { colors, radius, roleThemes, shadow, spacing } from "../theme";
 import { examTypes } from "../utils/constants";
 import { mongoId } from "../utils/mongoId";
 import { toastError, toastSuccess } from "../utils/toasts";
@@ -20,6 +28,8 @@ type Stud = Record<string, unknown> & {
   fname?: string;
   lname?: string;
   rollNumber?: unknown;
+  name?: string;
+  obtainedMarks?: unknown;
 };
 
 type Props = DrawerScreenProps<InstructorTabParamList, "InstructorMarks">;
@@ -88,7 +98,8 @@ export default function InstructorMarksScreen(_props: Props) {
       .map((s) => ({
         ...s,
         name: `${String(s.fname ?? "")} ${String(s.lname ?? "")}`.trim(),
-        obtainedMarks: 0,
+        obtainedMarks: s.obtainedMarks ?? "",
+        isPublic: true,
       }));
     setMarksRows(filtered);
   }, [course, students]);
@@ -124,9 +135,12 @@ export default function InstructorMarksScreen(_props: Props) {
     };
   }, [mode, course, examType, activityNumber, instructorId]);
 
+  const postReady = course && examType && activityNumber && totalMarks && weightage;
+  const filled = marksRows.filter((m) => m.obtainedMarks !== "" && m.obtainedMarks != null).length;
+
   async function postMarks() {
-    if (!course || !examType || !activityNumber || !totalMarks || !weightage) {
-      toastError("Fill course, exam type, activity #, total marks, and weightage.");
+    if (!postReady) {
+      toastError("Fill course, exam, activity #, total marks, and weightage.");
       return;
     }
     setBusy(true);
@@ -145,17 +159,17 @@ export default function InstructorMarksScreen(_props: Props) {
         courseId: course,
       });
       if (!res?.success) toastError(res?.message ?? "Post failed");
-      else toastSuccess(res.message ?? "Posted");
+      else toastSuccess(res.message ?? "Marks published");
     } finally {
       setBusy(false);
     }
   }
 
-  const viewMarks = (academic?.marks as Record<string, unknown>[]) ?? [];
+  const viewMarks = (academic?.marks as Stud[]) ?? [];
 
   async function updateMarks() {
     if (!academic?._id) {
-      toastError("Load marks first (view tab + selections).");
+      toastError("Complete filters to load marks first.");
       return;
     }
     setBusy(true);
@@ -165,7 +179,7 @@ export default function InstructorMarksScreen(_props: Props) {
         marks: viewMarks,
       });
       if (!res?.success) toastError(res?.message ?? "Update failed");
-      else toastSuccess(res.message ?? "Updated");
+      else toastSuccess(res.message ?? "Saved");
     } finally {
       setBusy(false);
     }
@@ -175,86 +189,135 @@ export default function InstructorMarksScreen(_props: Props) {
 
   return (
     <ScreenContainer>
-      <ScreenHeader
-        title="Marks"
-        subtitle="Post new marks or load and update an existing activity."
-      />
-      <View style={styles.modeRow}>
-        <Pressable
-          style={[styles.modeBtn, mode === "post" && styles.modeOn, { marginRight: 6 }]}
-          onPress={() => setMode("post")}
-        >
-          <Text style={[styles.modeTxt, mode === "post" && styles.modeTxtOn]}>Post marks</Text>
-        </Pressable>
-        <Pressable style={[styles.modeBtn, mode === "view" && styles.modeOn]} onPress={() => setMode("view")}>
-          <Text style={[styles.modeTxt, mode === "view" && styles.modeTxtOn]}>View / update</Text>
-        </Pressable>
-      </View>
-      <View style={[styles.panel, shadow.soft]}>
-        <SimpleSelect label="Course" options={courseOpts} value={course} onChange={setCourse} />
-        <SimpleSelect label="Exam type" options={examOpts} value={examType} onChange={setExamType} />
-        <FormTextInput label="Activity number" value={activityNumber} onChangeText={setActivityNumber} keyboardType="numeric" />
-      </View>
-      {mode === "post" && (
-        <>
-          <FormTextInput label="Total marks" value={totalMarks} onChangeText={setTotalMarks} keyboardType="decimal-pad" />
-          <FormTextInput label="Weightage" value={weightage} onChangeText={setWeightage} keyboardType="decimal-pad" />
-          {marksRows.map((m, i) => (
-            <View key={mongoId(m)} style={styles.markCard}>
-              <Text style={styles.roll}>{String(m.rollNumber ?? "")}</Text>
-              <Text style={styles.nm}>{String(m.name)}</Text>
-              <TextInput
-                style={styles.markIn}
-                keyboardType="decimal-pad"
-                placeholder="0"
-                placeholderTextColor={colors.textMuted}
-                value={String(m.obtainedMarks ?? "")}
-                onChangeText={(t) => {
-                  const next = [...marksRows];
-                  next[i] = { ...next[i], obtainedMarks: t as unknown as number };
-                  setMarksRows(next);
-                }}
-              />
-            </View>
-          ))}
-          <PrimaryButton title="Post marks" loading={busy} onPress={() => void postMarks()} />
-        </>
-      )}
-      {mode === "view" && (
-        <>
-          <Text style={styles.hint}>Enter activity # — marks load automatically when set.</Text>
+      <ScreenHeader title="Marks" subtitle="Post new grades or update an existing activity." />
+
+      <FadeInView>
+        <SegmentedTabs
+          tabs={[
+            { key: "post", label: "Post marks" },
+            { key: "view", label: "View / edit" },
+          ]}
+          active={mode}
+          onChange={(k) => setMode(k as "post" | "view")}
+          accent={roleThemes.instructor.accent}
+        />
+      </FadeInView>
+
+      <FadeInView delay={60}>
+        <View style={[styles.panel, shadow.soft]}>
+          <Text style={styles.step}>Assessment</Text>
+          <SimpleSelect label="Course" options={courseOpts} value={course} onChange={setCourse} />
+          <SimpleSelect label="Exam type" options={examOpts} value={examType} onChange={setExamType} />
           <FormTextInput
-            label="Total marks (edit)"
-            value={String(academic?.totalMarks ?? "")}
-            onChangeText={(t) => setAcademic((a) => (a ? { ...a, totalMarks: t } : a))}
-            keyboardType="decimal-pad"
+            label="Activity number"
+            value={activityNumber}
+            onChangeText={setActivityNumber}
+            keyboardType="numeric"
           />
-          <FormTextInput
-            label="Weightage (edit)"
-            value={String(academic?.weightage ?? "")}
-            onChangeText={(t) => setAcademic((a) => (a ? { ...a, weightage: t } : a))}
-            keyboardType="decimal-pad"
-          />
-          {viewMarks.map((m, i) => (
-            <View key={String(m.studentId ?? i)} style={styles.markCard}>
-              <Text style={styles.roll}>{String(m.rollNumber ?? "")}</Text>
-              <Text style={styles.nm}>{String(m.name ?? "")}</Text>
-              <TextInput
-                style={styles.markIn}
+          {mode === "post" ? (
+            <>
+              <FormTextInput
+                label="Total marks"
+                value={totalMarks}
+                onChangeText={setTotalMarks}
                 keyboardType="decimal-pad"
-                placeholder="0"
-                placeholderTextColor={colors.textMuted}
-                value={String(m.obtainedMarks ?? m.marks ?? "")}
-                onChangeText={(t) => {
-                  const next = [...viewMarks];
-                  next[i] = { ...next[i], obtainedMarks: t };
-                  setAcademic((a) => (a ? { ...a, marks: next } : a));
-                }}
               />
-            </View>
-          ))}
-          <PrimaryButton title="Update marks" loading={busy} onPress={() => void updateMarks()} />
-        </>
+              <FormTextInput
+                label="Weightage"
+                value={weightage}
+                onChangeText={setWeightage}
+                keyboardType="decimal-pad"
+              />
+            </>
+          ) : null}
+        </View>
+      </FadeInView>
+
+      {mode === "post" ? (
+        <FadeInView delay={100}>
+          {!course ? (
+            <Text style={styles.hint}>Select a course to load students.</Text>
+          ) : !postReady ? (
+            <Text style={styles.hint}>Complete all assessment fields above.</Text>
+          ) : (
+            <>
+              <View style={styles.progressWrap}>
+                <Text style={styles.progressLbl}>
+                  {filled} of {marksRows.length} graded
+                </Text>
+                <View style={styles.track}>
+                  <View
+                    style={[
+                      styles.fill,
+                      { width: marksRows.length ? `${(filled / marksRows.length) * 100}%` : "0%" },
+                    ]}
+                  />
+                </View>
+              </View>
+              {marksRows.map((m, i) => (
+                <View key={mongoId(m)} style={[styles.markCard, shadow.soft]}>
+                  <Text style={styles.roll}>{String(m.rollNumber ?? "")}</Text>
+                  <Text style={styles.nm} numberOfLines={1}>
+                    {String(m.name)}
+                  </Text>
+                  <TextInput
+                    style={styles.markIn}
+                    keyboardType="decimal-pad"
+                    placeholder="0"
+                    placeholderTextColor={colors.textMuted}
+                    value={String(m.obtainedMarks ?? "")}
+                    onChangeText={(t) => {
+                      const next = [...marksRows];
+                      next[i] = { ...next[i], obtainedMarks: t };
+                      setMarksRows(next);
+                    }}
+                  />
+                </View>
+              ))}
+              <PrimaryButton title="Publish marks" loading={busy} onPress={() => void postMarks()} />
+            </>
+          )}
+        </FadeInView>
+      ) : (
+        <FadeInView delay={100}>
+          {!academic ? (
+            <Text style={styles.hint}>Enter activity # — marks load automatically.</Text>
+          ) : (
+            <>
+              <FormTextInput
+                label="Total marks"
+                value={String(academic?.totalMarks ?? "")}
+                onChangeText={(t) => setAcademic((a) => (a ? { ...a, totalMarks: t } : a))}
+                keyboardType="decimal-pad"
+              />
+              <FormTextInput
+                label="Weightage"
+                value={String(academic?.weightage ?? "")}
+                onChangeText={(t) => setAcademic((a) => (a ? { ...a, weightage: t } : a))}
+                keyboardType="decimal-pad"
+              />
+              {viewMarks.map((m, i) => (
+                <View key={String(m.studentId ?? i)} style={[styles.markCard, shadow.soft]}>
+                  <Text style={styles.roll}>{String(m.rollNumber ?? "")}</Text>
+                  <Text style={styles.nm} numberOfLines={1}>
+                    {String(m.name ?? "")}
+                  </Text>
+                  <TextInput
+                    style={styles.markIn}
+                    keyboardType="decimal-pad"
+                    value={String(m.obtainedMarks ?? m.marks ?? "")}
+                    onChangeText={(t) => {
+                      const next = [...viewMarks];
+                      next[i] = { ...next[i], obtainedMarks: t };
+                      setAcademic((a) => (a ? { ...a, marks: next } : a));
+                    }}
+                  />
+                </View>
+              ))}
+              <PrimaryButton title="Save changes" loading={busy} onPress={() => void updateMarks()} />
+            </>
+          )}
+        </FadeInView>
       )}
     </ScreenContainer>
   );
@@ -268,20 +331,35 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+    gap: spacing.sm,
   },
-  modeRow: { flexDirection: "row", marginBottom: spacing.md },
-  modeBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: radius.sm,
+  step: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    marginBottom: 4,
+  },
+  hint: {
+    color: colors.textSecondary,
+    textAlign: "center",
+    padding: spacing.lg,
+    fontSize: 14,
     borderWidth: 1,
+    borderStyle: "dashed",
     borderColor: colors.border,
-    alignItems: "center",
-    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.md,
   },
-  modeOn: { backgroundColor: roleThemes.instructor.accent, borderColor: roleThemes.instructor.accent },
-  modeTxt: { fontWeight: "600", color: colors.textSecondary },
-  modeTxtOn: { color: colors.textInverse },
+  progressWrap: { marginBottom: spacing.md },
+  progressLbl: { fontSize: 12, color: colors.textSecondary, marginBottom: 6 },
+  track: {
+    height: 6,
+    backgroundColor: colors.borderLight,
+    borderRadius: radius.full,
+    overflow: "hidden",
+  },
+  fill: { height: "100%", backgroundColor: roleThemes.instructor.accent },
   markCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -292,11 +370,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
-    ...shadow.soft,
   },
-  roll: { width: 52, fontSize: 13, color: colors.textSecondary, fontWeight: "700" },
-  nm: { flex: 1, fontSize: 14, color: colors.text, fontWeight: "600" },
-  hint: { color: colors.textSecondary, marginBottom: spacing.sm, fontSize: 13 },
+  roll: { width: 48, fontSize: 12, color: colors.textMuted, fontWeight: "700" },
+  nm: { flex: 1, fontSize: 14, color: colors.text, fontWeight: "600", marginRight: 8 },
   markIn: {
     width: 64,
     borderWidth: 1,

@@ -6,8 +6,24 @@ import { fetchResponse } from '../../api/service';
 import { studentEndpoints } from '../../api/endpoints/studentEndpoints';
 import { toast } from 'react-toastify';
 import { toastErrorObject } from '../../utility/toasts';
-import DynamicTable from '../../components/tables/DynamicTable';
 import SelectField from '../../components/inputs/SelectField';
+import AcademicsFilterPanel from '../../components/academics/AcademicsFilterPanel';
+import FadeInPanel from '../../components/academics/FadeInPanel';
+import { AttendanceStatusBadge } from '../../components/academics/AttendanceStatusPills';
+
+function formatDate(d) {
+  if (!d) return '—';
+  try {
+    return new Date(d).toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  } catch {
+    return String(d).slice(0, 10);
+  }
+}
 
 export default function Attendance() {
   const studentId = JSON.parse(localStorage.getItem('student'))._id;
@@ -52,7 +68,7 @@ export default function Attendance() {
         return;
       }
       const sortedAttendances = res.data?.sort(
-        (a, b) => new Date(a.date) - new Date(b.date)
+        (a, b) => new Date(b.date) - new Date(a.date)
       );
       setAttendanceData(sortedAttendances);
     } catch (error) {
@@ -62,15 +78,32 @@ export default function Attendance() {
     }
   }
 
+  const selectedCourseLabel = courses?.find((c) => c.courseId === selectedCourse);
+
+  const summary = attendanceData.reduce(
+    (acc, row) => {
+      const s = String(row.attendance || '').toUpperCase();
+      if (s.startsWith('P')) acc.p += 1;
+      else if (s.startsWith('A')) acc.a += 1;
+      else if (s.startsWith('L')) acc.l += 1;
+      return acc;
+    },
+    { p: 0, a: 0, l: 0 }
+  );
+
   return (
     <StudentLayout isLoading={isLoading}>
       <PageHeader
-        title="Attendance"
-        subtitle="View your attendance records by course."
+        title="My Attendance"
+        subtitle="Track your presence for each class session."
       />
 
-      <ContentCard title="Select Course">
-        <div className="inst-filter-row">
+      <FadeInPanel>
+        <AcademicsFilterPanel
+          step="1"
+          title="Select course"
+          subtitle="Load your attendance history"
+        >
           <SelectField
             variant="instructor"
             label="Course | Instructor"
@@ -85,25 +118,53 @@ export default function Attendance() {
               handleFetchAttendances(event.target.value);
             }}
           />
-        </div>
-      </ContentCard>
+        </AcademicsFilterPanel>
+      </FadeInPanel>
 
-      <ContentCard
-        title="Attendance Record"
-        subtitle={
-          selectedCourse
-            ? `${attendanceData.length} record(s)`
-            : 'Select a course to view attendance'
-        }
-        className="mt-4"
-      >
-        <DynamicTable
-          variant="instructor"
-          headers={['Date', 'Status']}
-          data={selectedCourse ? attendanceData : []}
-          dataAttributes={['date', 'attendance']}
-        />
-      </ContentCard>
+      {selectedCourse && attendanceData.length > 0 ? (
+        <FadeInPanel delay={40}>
+          <div className="academics-toolbar mb-4">
+            <div className="academics-toolbar-stats">
+              <span className="academics-stat academics-stat-p">Present {summary.p}</span>
+              <span className="academics-stat academics-stat-a">Absent {summary.a}</span>
+              <span className="academics-stat academics-stat-l">Late {summary.l}</span>
+            </div>
+            <span className="inst-card-subtitle m-0">{attendanceData.length} sessions</span>
+          </div>
+        </FadeInPanel>
+      ) : null}
+
+      <FadeInPanel delay={80}>
+        <ContentCard
+          title="Session history"
+          subtitle={
+            selectedCourseLabel
+              ? selectedCourseLabel.title
+              : 'Choose a course above'
+          }
+          className="mt-4"
+        >
+          {!selectedCourse ? (
+            <p className="academics-empty-state">Select a course to view attendance.</p>
+          ) : attendanceData.length ? (
+            attendanceData.map((row, index) => (
+              <div
+                key={index}
+                className="academics-student-att-row"
+                style={{ animationDelay: `${index * 35}ms` }}
+              >
+                <div>
+                  <p className="offer-row-title">{formatDate(row.date)}</p>
+                  <p className="offer-row-sub">{selectedCourseLabel?.instructor}</p>
+                </div>
+                <AttendanceStatusBadge status={row.attendance} />
+              </div>
+            ))
+          ) : (
+            <p className="academics-empty-state">No attendance records for this course yet.</p>
+          )}
+        </ContentCard>
+      </FadeInPanel>
     </StudentLayout>
   );
 }

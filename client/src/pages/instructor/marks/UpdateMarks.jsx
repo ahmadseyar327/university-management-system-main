@@ -1,22 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import MarksTable from '../../../components/tables/MarksTable';
 import { fetchResponse } from '../../../api/service';
 import { instructorEndpoints } from '../../../api/endpoints/instructorEndpoints';
 import { toast } from 'react-toastify';
 import { toastErrorObject, toastSuccessObject } from '../../../utility/toasts';
 import InputField from '../../../components/inputs/InputField';
 import PrimaryButton from '../../../components/instructor/PrimaryButton';
+import MarksEntryGrid from '../../../components/academics/MarksEntryGrid';
+import FadeInPanel from '../../../components/academics/FadeInPanel';
 
 export default function UpdateMarks({ data, setData }) {
-  const [marksData, setMarksData] = useState(data?.marks);
+  const [marksData, setMarksData] = useState([]);
 
   useEffect(() => {
-    const sortedStudents = data?.marks?.sort((a, b) => {
-      const fnameComparison = a.fname.localeCompare(b.fname);
-      if (fnameComparison !== 0) return fnameComparison;
-      return a.lname.localeCompare(b.lname);
+    const sorted = [...(data?.marks || [])].sort((a, b) => {
+      const fn = (a.fname || '').localeCompare(b.fname || '');
+      return fn !== 0 ? fn : (a.lname || '').localeCompare(b.lname || '');
     });
-    setMarksData(sortedStudents);
+    setMarksData(
+      sorted.map((m) => ({
+        ...m,
+        name: m.name || `${m.fname || ''} ${m.lname || ''}`.trim(),
+        studentId: m.studentId,
+      }))
+    );
   }, [data?.marks]);
 
   async function updateMarks() {
@@ -38,18 +44,17 @@ export default function UpdateMarks({ data, setData }) {
 
   if (!data) {
     return (
-      <p className="inst-table-empty text-center py-8 text-gray-400">
+      <p className="academics-empty-state">
         Select course, exam type, and activity number to load marks.
       </p>
     );
   }
 
   return (
-    <>
+    <FadeInPanel>
       <PrimaryButton onClick={updateMarks} className="w-full mb-4">
-        Update Marks
+        Save changes
       </PrimaryButton>
-
       <div className="inst-filter-row mb-4">
         <InputField
           variant="instructor"
@@ -74,14 +79,12 @@ export default function UpdateMarks({ data, setData }) {
           min={0}
         />
       </div>
-
-      <MarksTable
-        variant="instructor"
-        headers={['Roll Number', 'Name', 'Obtained Marks']}
-        data={marksData}
-        setData={setMarksData}
-        dataAttributes={['rollNumber', 'name', 'obtainedMarks']}
+      <MarksEntryGrid
+        rows={marksData}
+        setRows={setMarksData}
+        totalMarks={data?.totalMarks}
+        studentIdKey="studentId"
       />
-    </>
+    </FadeInPanel>
   );
 }

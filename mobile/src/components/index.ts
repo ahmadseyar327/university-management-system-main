@@ -4,6 +4,8 @@ export { default as AuthScreenShell } from "./AuthScreenShell";
 export { default as DashboardHero } from "./DashboardHero";
 export { default as EmptyState } from "./EmptyState";
 export { default as FadeInView } from "./FadeInView";
+export { default as MarksResultRow } from "./MarksResultRow";
+export { default as SegmentedTabs } from "./SegmentedTabs";
 export { default as FormTextInput } from "./FormTextInput";
 export { default as PortalDrawerContent } from "./PortalDrawerContent";
 export { default as PrimaryButton } from "./PrimaryButton";

@@ -12,7 +12,12 @@ export default function ActivityCard({
       <div className="inst-activity-card">
         <div className="inst-activity-header" onClick={handleExpanded}>
           <span>{header}</span>
-          <span>{isExpanded ? '−' : '+'}</span>
+          <span
+            className={`inst-activity-chevron ${isExpanded ? 'inst-activity-chevron-open' : ''}`}
+            aria-hidden
+          >
+            ▾
+          </span>
         </div>
         {isExpanded ? <div className="inst-activity-body">{children}</div> : null}
       </div>

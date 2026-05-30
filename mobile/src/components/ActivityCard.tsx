@@ -1,5 +1,9 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { LayoutAnimation, Platform, Pressable, StyleSheet, Text, UIManager, View } from "react-native";
+
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import { colors, radius, roleThemes, shadow, spacing } from "../theme";
 
 type Props = {
@@ -25,7 +29,10 @@ export default function ActivityCard({
     <View style={[styles.card, shadow.soft]}>
       <Pressable
         style={[styles.header, { backgroundColor: instructor ? accentSoft : colors.surfaceMuted }]}
-        onPress={onToggle}
+        onPress={() => {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          onToggle();
+        }}
       >
         <Text style={[styles.headerText, instructor && { color: accent }]}>{header}</Text>
         <Text style={[styles.chev, instructor && { color: accent }]}>{isExpanded ? "▾" : "▸"}</Text>

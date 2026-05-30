@@ -6,9 +6,41 @@ import { fetchResponse } from '../../api/service';
 import { studentEndpoints } from '../../api/endpoints/studentEndpoints';
 import { toastErrorObject } from '../../utility/toasts';
 import { toast } from 'react-toastify';
-import DynamicTable from '../../components/tables/DynamicTable';
 import ActivityCard from '../../components/cards/ActivityCard';
 import SelectField from '../../components/inputs/SelectField';
+import AcademicsFilterPanel from '../../components/academics/AcademicsFilterPanel';
+import FadeInPanel from '../../components/academics/FadeInPanel';
+function MarkResultRow({ row, index }) {
+  const obtained = row.marks ?? row.obtainedMarks;
+  const total = row.totalMarks;
+  const pct =
+    total && obtained != null
+      ? Math.min(100, Math.round((Number(obtained) / Number(total)) * 100))
+      : null;
+
+  return (
+    <div className="academics-student-mark-row" style={{ animationDelay: `${index * 40}ms` }}>
+      <span className="academics-student-mark-activity">#{row.activityNumber}</span>
+      <div>
+        <p className="academics-student-mark-meta">
+          Weight {row.weightage}% · Total {total}
+        </p>
+        {pct != null ? (
+          <div className="academics-marks-progress-track mt-1" style={{ maxWidth: 120 }}>
+            <div
+              className="academics-marks-progress-fill"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        ) : null}
+      </div>
+      <span className="academics-student-mark-score">
+        {obtained ?? '—'}
+        <span className="academics-student-mark-meta"> / {total}</span>
+      </span>
+    </div>
+  );
+}
 
 export default function Marks() {
   const studentId = JSON.parse(localStorage.getItem('student'))._id;
@@ -75,80 +107,93 @@ export default function Marks() {
     }
   }
 
+  const selectedCourseLabel = courses?.find((c) => c.courseId === selectedCourse);
+
   return (
     <StudentLayout isLoading={isLoading}>
       <PageHeader
-        title="Marks"
-        subtitle="View your marks and grades by course and exam type."
+        title="My Marks"
+        subtitle="View grades by course and exam component."
       />
 
-      <ContentCard title="Select Course">
-        <SelectField
-          variant="instructor"
-          label="Course | Instructor"
-          options={courses?.map((course) => ({
-            title: course.title + ' | ' + course.instructor,
-            value: course.courseId,
-          }))}
-          value={selectedCourse}
-          onChange={(event) => {
-            setSelectedCourse(event.target.value);
-            setMarksData([]);
-            setExamTypesState((prev) => {
-              const next = { ...prev };
-              Object.keys(next).forEach((key) => {
-                next[key] = false;
-              });
-              return next;
-            });
-          }}
-        />
-      </ContentCard>
-
-      <ContentCard title="Exam Results" subtitle="Expand an exam type to view marks" className="mt-4">
-        {examTypes?.length ? (
-          examTypes.map((examType, index) => (
-            <ActivityCard
-              key={index}
-              variant="instructor"
-              header={examType}
-              isExpanded={examTypesState?.[examType]}
-              handleExpanded={() => {
-                if (!examTypesState[examType]) {
-                  if (!selectedCourse) {
-                    toast.warning('Please select a course.', toastErrorObject);
-                    return;
-                  }
-                  handleFetchAcademics(examType);
-                }
-                setExamTypesState({
-                  ...examTypesState,
-                  [examType]: !examTypesState[examType],
+      <FadeInPanel>
+        <AcademicsFilterPanel
+          step="1"
+          title="Select course"
+          subtitle="Choose a registered course to load results"
+        >
+          <SelectField
+            variant="instructor"
+            label="Course | Instructor"
+            options={courses?.map((course) => ({
+              title: course.title + ' | ' + course.instructor,
+              value: course.courseId,
+            }))}
+            value={selectedCourse}
+            onChange={(event) => {
+              setSelectedCourse(event.target.value);
+              setMarksData([]);
+              setExamTypesState((prev) => {
+                const next = { ...prev };
+                Object.keys(next).forEach((key) => {
+                  next[key] = false;
                 });
-              }}
-            >
-              <DynamicTable
+                return next;
+              });
+            }}
+          />
+          {selectedCourseLabel ? (
+            <div className="academics-session-banner mt-3">
+              <span>📚</span>
+              <span>
+                Viewing <strong>{selectedCourseLabel.title}</strong>
+              </span>
+            </div>
+          ) : null}
+        </AcademicsFilterPanel>
+      </FadeInPanel>
+
+      <FadeInPanel delay={60}>
+        <ContentCard
+          title="Exam results"
+          subtitle="Expand an exam type to see each activity"
+          className="mt-4"
+        >
+          {examTypes?.length ? (
+            examTypes.map((examType, index) => (
+              <ActivityCard
+                key={index}
                 variant="instructor"
-                headers={[
-                  'Activity Number',
-                  'Weightage',
-                  'Total Marks',
-                  'Obtained Marks',
-                ]}
-                data={marksData ? marksData[examType] : []}
-                dataAttributes={[
-                  'activityNumber',
-                  'weightage',
-                  'totalMarks',
-                  'marks',
-                ]}
-              />
-            </ActivityCard>
-          ))
-        ) : (
-          <p className="inst-table-empty text-center py-6">No exam types available.</p>
-        )}
-      </ContentCard>
+                header={examType}
+                isExpanded={examTypesState?.[examType]}
+                handleExpanded={() => {
+                  if (!examTypesState[examType]) {
+                    if (!selectedCourse) {
+                      toast.warning('Please select a course.', toastErrorObject);
+                      return;
+                    }
+                    handleFetchAcademics(examType);
+                  }
+                  setExamTypesState({
+                    ...examTypesState,
+                    [examType]: !examTypesState[examType],
+                  });
+                }}
+              >
+                {(marksData?.[examType] ?? []).length ? (
+                  marksData[examType].map((row, i) => (
+                    <MarkResultRow key={i} row={row} index={i} />
+                  ))
+                ) : (
+                  <p className="academics-empty-state py-4">No marks posted yet.</p>
+                )}
+              </ActivityCard>
+            ))
+          ) : (
+            <p className="inst-table-empty text-center py-6">No exam types available.</p>
+          )}
+        </ContentCard>
+      </FadeInPanel>
     </StudentLayout>
   );
 }
