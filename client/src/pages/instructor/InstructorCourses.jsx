@@ -89,7 +89,7 @@ export default function InstructorCourses() {
 
       <ContentCard title="Course Catalog" subtitle={`${allCourses.length} courses available`}>
         <div className="inst-table-wrap">
-          <table className="inst-table">
+          <table className="inst-table inst-table-responsive">
             <thead>
               <tr>
                 <th>Title</th>
@@ -107,12 +107,12 @@ export default function InstructorCourses() {
                   const status = statusMap.get(item._id);
                   return (
                     <tr key={item._id}>
-                      <td>{item.title}</td>
-                      <td>{item.code}</td>
-                      <td>{item.type}</td>
-                      <td>{item.creditHours}</td>
-                      <td>{item.fee}</td>
-                      <td>
+                      <td data-label="Title">{item.title}</td>
+                      <td data-label="Code">{item.code}</td>
+                      <td data-label="Type">{item.type}</td>
+                      <td data-label="Credit Hours">{item.creditHours}</td>
+                      <td data-label="Fee">{item.fee}</td>
+                      <td data-label="Status">
                         {status === 'approved' ? (
                           <span className="inst-badge inst-badge-success">Approved</span>
                         ) : status === 'pending' ? (
@@ -121,7 +121,7 @@ export default function InstructorCourses() {
                           <span className="inst-badge inst-badge-neutral">Not requested</span>
                         )}
                       </td>
-                      <td>
+                      <td data-label="Action">
                         {status === 'approved' ? (
                           <span className="inst-badge inst-badge-success">Assigned</span>
                         ) : status === 'pending' ? (

@@ -1,19 +1,22 @@
 import { Ionicons } from "@expo/vector-icons";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import React from "react";
+import { PortalDrawerContent } from "../components";
+import { useAuth } from "../contexts/AuthContext";
 import InstructorAttendanceScreen from "../screens/InstructorAttendanceScreen";
 import InstructorCoursesScreen from "../screens/InstructorCoursesScreen";
 import InstructorHomeScreen from "../screens/InstructorHomeScreen";
 import InstructorMarksScreen from "../screens/InstructorMarksScreen";
 import InstructorSettingsScreen from "../screens/InstructorSettingsScreen";
 import InstructorStudentsScreen from "../screens/InstructorStudentsScreen";
-import type { InstructorTabParamList } from "./types";
+import type { InstructorTabParamList, RootStackParamList } from "./types";
+import { drawerScreenOptions } from "./drawerTheme";
 
 const Drawer = createDrawerNavigator<InstructorTabParamList>();
 
 function instructorIcon(name: keyof InstructorTabParamList) {
   const map: Record<keyof InstructorTabParamList, keyof typeof Ionicons.glyphMap> = {
-    InstructorOverview: "person-circle-outline",
+    InstructorOverview: "home-outline",
     InstructorCourses: "book-outline",
     InstructorStudents: "people-outline",
     InstructorAttendance: "calendar-outline",
@@ -24,30 +27,31 @@ function instructorIcon(name: keyof InstructorTabParamList) {
 }
 
 export default function InstructorTabNavigator() {
+  const { instructorData, signOutInstructor } = useAuth();
+
   return (
     <Drawer.Navigator
       defaultStatus="closed"
+      drawerContent={(props) => (
+        <PortalDrawerContent
+          {...props}
+          role="instructor"
+          userName={`${instructorData?.fname ?? ""} ${instructorData?.lname ?? ""}`.trim()}
+          userEmail={String(instructorData?.email ?? "")}
+          onSignOut={() => {
+            void signOutInstructor();
+            props.navigation.getParent()?.reset({ index: 0, routes: [{ name: "Home" as keyof RootStackParamList }] });
+          }}
+        />
+      )}
       screenOptions={({ route }) => ({
-        drawerPosition: "left",
-        drawerType: "front",
-        overlayColor: "rgba(15, 23, 42, 0.28)",
-        swipeEdgeWidth: 90,
-        drawerActiveTintColor: "#047857",
-        drawerInactiveTintColor: "#475569",
-        drawerActiveBackgroundColor: "#d1fae5",
-        drawerItemStyle: { borderRadius: 10, marginHorizontal: 8 },
-        drawerLabelStyle: { marginLeft: -10, fontWeight: "600", fontSize: 14 },
-        drawerStyle: { width: 280, backgroundColor: "#f8fafc", borderRightWidth: 1, borderRightColor: "#e2e8f0" },
-        sceneStyle: { backgroundColor: "#ffffff" },
-        headerTintColor: "#065f46",
-        headerTitleStyle: { fontWeight: "700" },
-        headerStyle: { backgroundColor: "#f8fafc" },
+        ...drawerScreenOptions("instructor"),
         drawerIcon: ({ color, size }) => (
           <Ionicons name={instructorIcon(route.name as keyof InstructorTabParamList)} color={color} size={size} />
         ),
       })}
     >
-      <Drawer.Screen name="InstructorOverview" component={InstructorHomeScreen} options={{ title: "Overview" }} />
+      <Drawer.Screen name="InstructorOverview" component={InstructorHomeScreen} options={{ title: "Dashboard" }} />
       <Drawer.Screen name="InstructorCourses" component={InstructorCoursesScreen} options={{ title: "Courses" }} />
       <Drawer.Screen name="InstructorStudents" component={InstructorStudentsScreen} options={{ title: "Students" }} />
       <Drawer.Screen name="InstructorAttendance" component={InstructorAttendanceScreen} options={{ title: "Attendance" }} />

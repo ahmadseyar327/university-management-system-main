@@ -1,19 +1,22 @@
 import { Ionicons } from "@expo/vector-icons";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import React from "react";
+import { PortalDrawerContent } from "../components";
+import { useAuth } from "../contexts/AuthContext";
 import StudentAttendanceScreen from "../screens/StudentAttendanceScreen";
 import StudentCoursesListScreen from "../screens/StudentCoursesListScreen";
 import StudentHomeScreen from "../screens/StudentHomeScreen";
 import StudentMarksScreen from "../screens/StudentMarksScreen";
 import StudentRegisterCourseScreen from "../screens/StudentRegisterCourseScreen";
 import StudentSettingsScreen from "../screens/StudentSettingsScreen";
-import type { StudentTabParamList } from "./types";
+import type { RootStackParamList, StudentTabParamList } from "./types";
+import { drawerScreenOptions } from "./drawerTheme";
 
 const Drawer = createDrawerNavigator<StudentTabParamList>();
 
 function studentIcon(name: keyof StudentTabParamList) {
   const map: Record<keyof StudentTabParamList, keyof typeof Ionicons.glyphMap> = {
-    StudentOverview: "person-circle-outline",
+    StudentOverview: "home-outline",
     StudentCourses: "library-outline",
     StudentRegister: "add-circle-outline",
     StudentMarks: "bar-chart-outline",
@@ -24,30 +27,31 @@ function studentIcon(name: keyof StudentTabParamList) {
 }
 
 export default function StudentTabNavigator() {
+  const { studentData, signOutStudent } = useAuth();
+
   return (
     <Drawer.Navigator
       defaultStatus="closed"
+      drawerContent={(props) => (
+        <PortalDrawerContent
+          {...props}
+          role="student"
+          userName={`${studentData?.fname ?? ""} ${studentData?.lname ?? ""}`.trim()}
+          userEmail={String(studentData?.email ?? "")}
+          onSignOut={() => {
+            void signOutStudent();
+            props.navigation.getParent()?.reset({ index: 0, routes: [{ name: "Home" as keyof RootStackParamList }] });
+          }}
+        />
+      )}
       screenOptions={({ route }) => ({
-        drawerPosition: "left",
-        drawerType: "front",
-        overlayColor: "rgba(15, 23, 42, 0.28)",
-        swipeEdgeWidth: 90,
-        drawerActiveTintColor: "#1d4ed8",
-        drawerInactiveTintColor: "#475569",
-        drawerActiveBackgroundColor: "#dbeafe",
-        drawerItemStyle: { borderRadius: 10, marginHorizontal: 8 },
-        drawerLabelStyle: { marginLeft: -10, fontWeight: "600", fontSize: 14 },
-        drawerStyle: { width: 280, backgroundColor: "#f8fafc", borderRightWidth: 1, borderRightColor: "#e2e8f0" },
-        sceneStyle: { backgroundColor: "#ffffff" },
-        headerTintColor: "#1a365d",
-        headerTitleStyle: { fontWeight: "700" },
-        headerStyle: { backgroundColor: "#f8fafc" },
+        ...drawerScreenOptions("student"),
         drawerIcon: ({ color, size }) => (
           <Ionicons name={studentIcon(route.name as keyof StudentTabParamList)} color={color} size={size} />
         ),
       })}
     >
-      <Drawer.Screen name="StudentOverview" component={StudentHomeScreen} options={{ title: "Profile" }} />
+      <Drawer.Screen name="StudentOverview" component={StudentHomeScreen} options={{ title: "Dashboard" }} />
       <Drawer.Screen name="StudentCourses" component={StudentCoursesListScreen} options={{ title: "My courses" }} />
       <Drawer.Screen name="StudentRegister" component={StudentRegisterCourseScreen} options={{ title: "Register" }} />
       <Drawer.Screen name="StudentMarks" component={StudentMarksScreen} options={{ title: "Marks" }} />

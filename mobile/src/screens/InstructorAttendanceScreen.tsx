@@ -5,7 +5,6 @@ import {
   LayoutAnimation,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   UIManager,
@@ -13,8 +12,9 @@ import {
 } from "react-native";
 import { courseEndpoints, instructorEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
-import { FormTextInput, PrimaryButton } from "../components";
-import SimpleSelect, { SelectOption } from "../components/SimpleSelect";
+import { EmptyState, FormTextInput, PrimaryButton, ScreenContainer, ScreenHeader, SimpleSelect } from "../components";
+import type { SelectOption } from "../components/SimpleSelect";
+import { colors, radius, roleThemes, shadow, spacing } from "../theme";
 import LoadingView from "../components/LoadingView";
 import { useAuth } from "../contexts/AuthContext";
 import type { InstructorTabParamList } from "../navigation/types";
@@ -129,12 +129,12 @@ function AttendanceRow({
               }}
               style={({ pressed }) => [
                 styles.chip,
-                { borderColor: meta.color, backgroundColor: active ? meta.soft : "#fff" },
+                { borderColor: meta.color, backgroundColor: active ? meta.soft : colors.surface },
                 pressed && styles.chipPressed,
                 active && { backgroundColor: meta.soft },
               ]}
             >
-              <Text style={[styles.chipLabel, { color: active ? meta.color : "#64748b" }]}>{meta.label}</Text>
+              <Text style={[styles.chipLabel, { color: active ? meta.color : colors.textSecondary }]}>{meta.label}</Text>
             </Pressable>
           );
         })}
@@ -346,13 +346,13 @@ export default function InstructorAttendanceScreen(_props: Props) {
   if (loading) return <LoadingView />;
 
   return (
-    <ScrollView style={styles.wrap} contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
-      <View style={styles.hero}>
-        <Text style={styles.heroTitle}>Take attendance</Text>
-        <Text style={styles.heroSub}>Tap a status for each student, then save. Progress animates as you go.</Text>
-      </View>
+    <ScreenContainer>
+      <ScreenHeader
+        title="Take attendance"
+        subtitle="Tap a status for each student, then save. Progress animates as you go."
+      />
 
-      <View style={styles.panel}>
+      <View style={[styles.panel, shadow.soft]}>
         <FormTextInput label="Date (YYYY-MM-DD)" value={date} onChangeText={setDate} autoCapitalize="none" />
         <SimpleSelect label="Course" options={courseOptions} value={courseId} onChange={setCourseId} />
         <View style={styles.modeBanner}>
@@ -369,7 +369,7 @@ export default function InstructorAttendanceScreen(_props: Props) {
             style={styles.track}
             onLayout={(e) => setTrackW(e.nativeEvent.layout.width)}
           >
-            <Animated.View style={[styles.trackFill, { width: barAnim, backgroundColor: "#10b981" }]} />
+            <Animated.View style={[styles.trackFill, { width: barAnim, backgroundColor: colors.instructor }]} />
           </View>
           <View style={styles.summaryRow}>
             <Text style={[styles.summaryItem, { color: STATUS.P.color }]}>Present {counts.p}</Text>
@@ -388,7 +388,11 @@ export default function InstructorAttendanceScreen(_props: Props) {
       ))}
 
       {!!courseId && !rows.length && (
-        <Text style={styles.empty}>No students in this course, or load is still in progress.</Text>
+        <EmptyState
+          icon="people-outline"
+          title="No students found"
+          message="No students in this course, or load is still in progress."
+        />
       )}
 
       <PrimaryButton
@@ -396,93 +400,85 @@ export default function InstructorAttendanceScreen(_props: Props) {
         loading={saving}
         onPress={() => void submit()}
       />
-    </ScrollView>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: "#f1f5f9" },
-  inner: { padding: 16, paddingBottom: 40 },
-  hero: { marginBottom: 14 },
-  heroTitle: { fontSize: 22, fontWeight: "800", color: "#0f172a", letterSpacing: -0.3 },
-  heroSub: { marginTop: 6, fontSize: 14, color: "#64748b", lineHeight: 20 },
   panel: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 14,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.border,
   },
   modeBanner: {
-    marginTop: 8,
-    backgroundColor: "#eff6ff",
-    borderRadius: 10,
+    marginTop: spacing.sm,
+    backgroundColor: roleThemes.instructor.accentSoft,
+    borderRadius: radius.sm,
     padding: 10,
     borderWidth: 1,
-    borderColor: "#bfdbfe",
+    borderColor: colors.instructor,
   },
-  modeBannerTxt: { fontSize: 13, color: "#1e40af", fontWeight: "600" },
+  modeBannerTxt: { fontSize: 13, color: roleThemes.instructor.accent, fontWeight: "600" },
   summary: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 14,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.border,
+    ...shadow.soft,
   },
-  summaryTitle: { fontSize: 15, fontWeight: "700", color: "#0f172a", marginBottom: 10 },
+  summaryTitle: { fontSize: 15, fontWeight: "700", color: colors.text, marginBottom: 10 },
   track: {
     height: 10,
-    borderRadius: 999,
-    backgroundColor: "#e2e8f0",
+    borderRadius: radius.full,
+    backgroundColor: colors.border,
     overflow: "hidden",
     marginBottom: 10,
   },
-  trackFill: { height: "100%", borderRadius: 999 },
+  trackFill: { height: "100%", borderRadius: radius.full },
   summaryRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 10 },
   summaryItem: { fontSize: 13, fontWeight: "700" },
   markAllBtn: {
     alignSelf: "flex-start",
-    backgroundColor: "#ecfdf5",
+    backgroundColor: roleThemes.instructor.accentSoft,
     paddingVertical: 10,
     paddingHorizontal: 14,
-    borderRadius: 10,
+    borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: "#6ee7b7",
+    borderColor: colors.instructor,
   },
-  markAllTxt: { color: "#047857", fontWeight: "700", fontSize: 14 },
+  markAllTxt: { color: colors.instructor, fontWeight: "700", fontSize: 14 },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     padding: 14,
-    marginBottom: 12,
+    marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 2,
+    borderColor: colors.border,
+    ...shadow.soft,
   },
   cardTop: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   avatar: {
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: radius.sm,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
   },
   avatarTxt: { fontWeight: "800", fontSize: 16 },
   cardMeta: { flex: 1 },
-  studentName: { fontSize: 16, fontWeight: "700", color: "#0f172a" },
-  rollLine: { fontSize: 13, color: "#64748b", marginTop: 2 },
+  studentName: { fontSize: 16, fontWeight: "700", color: colors.text },
+  rollLine: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
   statusPill: {
     minWidth: 36,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 999,
+    borderRadius: radius.full,
     borderWidth: 1.5,
     alignItems: "center",
   },
@@ -491,12 +487,11 @@ const styles = StyleSheet.create({
   chip: {
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 10,
+    borderRadius: radius.sm,
     borderWidth: 1.5,
-    borderColor: "#cbd5e1",
-    backgroundColor: "#fff",
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   chipPressed: { opacity: 0.85 },
   chipLabel: { fontSize: 13, fontWeight: "700" },
-  empty: { textAlign: "center", color: "#64748b", marginVertical: 20 },
 });

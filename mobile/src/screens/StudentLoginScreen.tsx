@@ -1,11 +1,12 @@
 import type { StackNavigationProp } from "@react-navigation/stack";
 import React, { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { studentEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
-import { AuthScreenShell, PrimaryButton } from "../components";
+import { AuthScreenShell, FormTextInput, PrimaryButton } from "../components";
 import { useAuth } from "../contexts/AuthContext";
 import type { RootStackParamList } from "../navigation/types";
+import { colors, radius, spacing } from "../theme";
 import { toastError, toastSuccess } from "../utils/toasts";
 
 type Nav = StackNavigationProp<RootStackParamList, "StudentLogin">;
@@ -57,19 +58,13 @@ export default function StudentLoginScreen({ navigation }: { navigation: Nav }) 
       badgeTone="student"
       eyebrow="Student"
       title="Sign in"
-      subtitle="Use the same email or roll number and password as the web portal."
+      subtitle="Use the same credentials as the web portal."
       footer={
         <View style={styles.footer}>
-          <Text style={styles.footerMuted}>Don’t have an account?</Text>
-          <Pressable
-            onPress={() => navigation.navigate("StudentSignup")}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Create a student account"
-          >
+          <Text style={styles.footerMuted}>Don't have an account?</Text>
+          <Pressable onPress={() => navigation.navigate("StudentSignup")} hitSlop={12}>
             <Text style={styles.footerLink}>Create account</Text>
           </Pressable>
-          <Text style={styles.footerHint}>You’ll register as a student — your account type is set automatically.</Text>
         </View>
       }
     >
@@ -88,32 +83,30 @@ export default function StudentLoginScreen({ navigation }: { navigation: Nav }) 
         </Pressable>
       </View>
       {useRoll ? (
-        <TextInput
-          style={styles.input}
-          placeholder="Roll number"
+        <FormTextInput
+          label="Roll number"
+          placeholder="Enter roll number"
           value={rollNumber}
           onChangeText={setRollNumber}
           autoCapitalize="none"
-          placeholderTextColor="#a0aec0"
+          keyboardType="number-pad"
         />
       ) : (
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
+        <FormTextInput
+          label="Email"
+          placeholder="you@university.edu"
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
-          placeholderTextColor="#a0aec0"
         />
       )}
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
+      <FormTextInput
+        label="Password"
+        placeholder="Enter password"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
-        placeholderTextColor="#a0aec0"
       />
       <PrimaryButton title="Sign in" loading={loading} onPress={() => void handleLogin()} />
     </AuthScreenShell>
@@ -121,38 +114,20 @@ export default function StudentLoginScreen({ navigation }: { navigation: Nav }) 
 }
 
 const styles = StyleSheet.create({
-  toggleRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
+  toggleRow: { flexDirection: "row", gap: 10, marginBottom: 4 },
   toggleChip: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
+    paddingVertical: 11,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
     alignItems: "center",
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.surfaceMuted,
   },
-  toggleChipActive: { backgroundColor: "#1a365d", borderColor: "#1a365d" },
-  toggleText: { color: "#64748b", fontWeight: "600", fontSize: 14 },
+  toggleChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  toggleText: { color: colors.textSecondary, fontWeight: "600", fontSize: 14 },
   toggleTextActive: { color: "#fff" },
-  input: {
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    marginBottom: 12,
-    color: "#1a202c",
-    backgroundColor: "#fff",
-  },
-  footer: { marginTop: 28, alignItems: "center", paddingHorizontal: 8 },
-  footerMuted: { fontSize: 14, color: "#64748b", marginBottom: 6 },
-  footerLink: { fontSize: 16, fontWeight: "700", color: "#1a365d" },
-  footerHint: {
-    marginTop: 14,
-    fontSize: 13,
-    color: "#94a3b8",
-    textAlign: "center",
-    lineHeight: 18,
-  },
+  footer: { marginTop: spacing.lg, alignItems: "center" },
+  footerMuted: { fontSize: 14, color: colors.textSecondary, marginBottom: 6 },
+  footerLink: { fontSize: 16, fontWeight: "700", color: colors.primary },
 });

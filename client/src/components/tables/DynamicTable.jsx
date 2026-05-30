@@ -11,7 +11,7 @@ export default function DynamicTable({
 }) {
   const tableClass =
     variant === 'instructor'
-      ? 'inst-table'
+      ? 'inst-table inst-table-responsive'
       : 'table table-sm ' + (styles || '');
 
   const theadClass =
@@ -32,7 +32,7 @@ export default function DynamicTable({
             data.map((item, index) => (
               <tr key={index}>
                 {dataAttributes.map((attribute, attrIndex) => (
-                  <td key={attrIndex}>
+                  <td key={attrIndex} data-label={headers[attrIndex]}>
                     {attribute === 'createdAt' || attribute === 'date'
                       ? moment(item[attribute]).format('LL')
                       : item[attribute]}

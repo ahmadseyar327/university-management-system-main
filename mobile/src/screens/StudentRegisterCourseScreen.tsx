@@ -13,10 +13,12 @@ import {
 } from "react-native";
 import { courseEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
+import { EmptyState, SlideOverDetail } from "../components";
 import LoadingView from "../components/LoadingView";
-import SlideOverDetail from "../components/SlideOverDetail";
 import { useAuth } from "../contexts/AuthContext";
 import type { StudentTabParamList } from "../navigation/types";
+import { colors, radius } from "../theme";
+import { listStyles } from "../theme/listStyles";
 import { mongoId } from "../utils/mongoId";
 import { toastError, toastSuccess } from "../utils/toasts";
 
@@ -147,22 +149,28 @@ export default function StudentRegisterCourseScreen(_props: Props) {
   if (loading && courses.length === 0) return <LoadingView />;
 
   return (
-    <View style={styles.screen}>
+    <View style={listStyles.screen}>
       <FlatList
         data={listRows}
         keyExtractor={(item, i) => courseKey(item) || String(item._id ?? i)}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={<Text style={styles.empty}>No offered courses.</Text>}
-        ItemSeparatorComponent={() => <View style={styles.sep} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
+        }
+        contentContainerStyle={listStyles.listFlush}
+        ListEmptyComponent={
+          <View style={listStyles.emptyWrap}>
+            <EmptyState icon="school-outline" title="No offered courses." />
+          </View>
+        }
+        ItemSeparatorComponent={() => <View style={listStyles.sep} />}
         renderItem={({ item }) => (
           <Pressable
-            style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+            style={({ pressed }) => [listStyles.row, pressed && listStyles.rowPressed]}
             onPress={() => setDetail(item)}
-            android_ripple={{ color: "#e2e8f0" }}
+            android_ripple={{ color: colors.border }}
           >
             <View style={styles.rowLeft}>
-              <Text style={styles.rowName} numberOfLines={1}>
+              <Text style={listStyles.rowName} numberOfLines={1}>
                 {titleOf(item)}
               </Text>
               {item.__registered ? (
@@ -171,7 +179,7 @@ export default function StudentRegisterCourseScreen(_props: Props) {
                 </View>
               ) : null}
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+            <Ionicons name="chevron-forward" size={20} color={colors.primary} />
           </Pressable>
         )}
       />
@@ -179,23 +187,23 @@ export default function StudentRegisterCourseScreen(_props: Props) {
       <SlideOverDetail open={detail !== null} onClosed={() => setDetail(null)}>
         {detail ? (
           <>
-            <Text style={styles.detailEyebrow}>Course</Text>
-            <Text style={styles.detailTitle}>{titleOf(detail)}</Text>
-            <View style={styles.detailCard}>
-              <Text style={styles.k}>Code</Text>
-              <Text style={styles.v}>{String(detail.code ?? "?")}</Text>
-              <View style={styles.divider} />
-              <Text style={styles.k}>Type</Text>
-              <Text style={styles.v}>{String(detail.type ?? "?")}</Text>
-              <View style={styles.divider} />
-              <Text style={styles.k}>Credit hours</Text>
-              <Text style={styles.v}>{String(detail.creditHours ?? "?")}</Text>
-              <View style={styles.divider} />
-              <Text style={styles.k}>Fee</Text>
-              <Text style={styles.v}>{String(detail.fee ?? "?")}</Text>
-              <View style={styles.divider} />
-              <Text style={styles.k}>Instructor</Text>
-              <Text style={styles.v}>{String(detail.instructorName ?? "?")}</Text>
+            <Text style={listStyles.detailEyebrow}>Course</Text>
+            <Text style={listStyles.detailTitle}>{titleOf(detail)}</Text>
+            <View style={listStyles.detailCard}>
+              <Text style={listStyles.k}>Code</Text>
+              <Text style={listStyles.v}>{String(detail.code ?? "—")}</Text>
+              <View style={listStyles.divider} />
+              <Text style={listStyles.k}>Type</Text>
+              <Text style={listStyles.v}>{String(detail.type ?? "—")}</Text>
+              <View style={listStyles.divider} />
+              <Text style={listStyles.k}>Credit hours</Text>
+              <Text style={listStyles.v}>{String(detail.creditHours ?? "—")}</Text>
+              <View style={listStyles.divider} />
+              <Text style={listStyles.k}>Fee</Text>
+              <Text style={listStyles.v}>{String(detail.fee ?? "—")}</Text>
+              <View style={listStyles.divider} />
+              <Text style={listStyles.k}>Instructor</Text>
+              <Text style={listStyles.v}>{String(detail.instructorName ?? "—")}</Text>
             </View>
             {registeredIds.has(courseKey(detail)) ? (
               <View style={styles.registeredBtn}>
@@ -204,7 +212,7 @@ export default function StudentRegisterCourseScreen(_props: Props) {
             ) : (
               <Pressable style={styles.primaryBtn} onPress={() => void register(detail)}>
                 {registeringId === courseKey(detail) ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={colors.textInverse} />
                 ) : (
                   <Text style={styles.primaryTxt}>Register now</Text>
                 )}
@@ -218,72 +226,32 @@ export default function StudentRegisterCourseScreen(_props: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#f1f5f9" },
-  list: { paddingVertical: 8, paddingBottom: 40 },
-  empty: { textAlign: "center", color: "#64748b", marginTop: 40 },
-  sep: { height: 1, backgroundColor: "#e2e8f0", marginLeft: 20 },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#fff",
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-  },
-  rowPressed: { backgroundColor: "#f8fafc" },
   rowLeft: { flex: 1, marginRight: 8 },
-  rowName: { fontSize: 17, fontWeight: "600", color: "#0f172a" },
   badge: {
     alignSelf: "flex-start",
     marginTop: 6,
-    backgroundColor: "#d1fae5",
-    borderColor: "#86efac",
+    backgroundColor: colors.successSoft,
+    borderColor: colors.success,
     borderWidth: 1,
-    borderRadius: 999,
+    borderRadius: radius.full,
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
-  badgeText: { color: "#047857", fontSize: 12, fontWeight: "700" },
-  detailEyebrow: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#94a3b8",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    marginBottom: 8,
-  },
-  detailTitle: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: "#0f172a",
-    letterSpacing: -0.5,
-    marginBottom: 20,
-  },
-  detailCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    marginBottom: 20,
-  },
-  k: { fontSize: 12, fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", marginBottom: 4 },
-  v: { fontSize: 16, fontWeight: "600", color: "#0f172a", marginBottom: 14 },
-  divider: { height: 1, backgroundColor: "#f1f5f9", marginVertical: 4 },
+  badgeText: { color: colors.success, fontSize: 12, fontWeight: "700" },
   primaryBtn: {
-    backgroundColor: "#1d4ed8",
-    borderRadius: 14,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
     paddingVertical: 14,
     alignItems: "center",
   },
-  primaryTxt: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  primaryTxt: { color: colors.textInverse, fontWeight: "700", fontSize: 16 },
   registeredBtn: {
-    backgroundColor: "#ecfdf5",
-    borderRadius: 14,
+    backgroundColor: colors.successSoft,
+    borderRadius: radius.md,
     paddingVertical: 14,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#86efac",
+    borderColor: colors.success,
   },
-  registeredTxt: { color: "#047857", fontWeight: "700", fontSize: 16 },
+  registeredTxt: { color: colors.success, fontWeight: "700", fontSize: 16 },
 });

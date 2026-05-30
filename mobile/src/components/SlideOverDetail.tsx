@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { colors, radius, shadow, spacing } from "../theme";
 
 const winW = Dimensions.get("window").width;
 
@@ -117,7 +118,7 @@ export default function SlideOverDetail({ open, onClosed, children }: Props) {
               accessibilityRole="button"
               accessibilityLabel="Close details"
             >
-              <Ionicons name="close-circle" size={30} color="#64748b" />
+              <Ionicons name="close-circle" size={30} color={colors.textSecondary} />
             </Pressable>
           </View>
           <ScrollView
@@ -139,7 +140,7 @@ const styles = StyleSheet.create({
   backdropPress: { ...StyleSheet.absoluteFillObject },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(15, 23, 42, 0.5)",
+    backgroundColor: colors.overlay,
   },
   panel: {
     position: "absolute",
@@ -147,29 +148,30 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: Math.min(winW * 0.92, 420),
-    backgroundColor: "#f8fafc",
-    borderTopLeftRadius: 20,
-    borderBottomLeftRadius: 20,
+    backgroundColor: colors.surfaceMuted,
+    borderTopLeftRadius: radius.xl,
+    borderBottomLeftRadius: radius.xl,
     borderLeftWidth: 1,
-    borderColor: "#e2e8f0",
-    shadowColor: "#0f172a",
-    shadowOffset: { width: -6, height: 0 },
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-    elevation: 24,
+    borderColor: colors.border,
+    ...shadow.card,
   },
   panelHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
-    marginBottom: 8,
+    borderBottomColor: colors.border,
+    marginBottom: spacing.sm,
   },
-  panelHeaderTxt: { fontSize: 14, fontWeight: "700", color: "#64748b", letterSpacing: 0.5 },
+  panelHeaderTxt: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.textSecondary,
+    letterSpacing: 0.5,
+  },
   closeBtn: { padding: 4 },
   scroll: { flex: 1 },
-  scrollInner: { paddingHorizontal: 20, paddingBottom: 24 },
+  scrollInner: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
 });

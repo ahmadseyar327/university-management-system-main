@@ -1,4 +1,5 @@
 import type { StackNavigationProp } from "@react-navigation/stack";
+import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
   ActivityIndicator,
@@ -8,27 +9,51 @@ import {
   Text,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AmbientBackground from "../components/AmbientBackground";
+import FadeInView from "../components/FadeInView";
 import { useAuth } from "../contexts/AuthContext";
 import type { RootStackParamList } from "../navigation/types";
+import { colors, radius, shadow, spacing, typography } from "../theme";
 
 type Nav = StackNavigationProp<RootStackParamList, "Home">;
 
+const roles = [
+  {
+    key: "student",
+    title: "Student",
+    desc: "Courses, marks, attendance & profile",
+    icon: "school-outline" as const,
+    color: colors.primary,
+    route: "StudentLogin" as const,
+  },
+  {
+    key: "instructor",
+    title: "Instructor",
+    desc: "Classes, grading & attendance",
+    icon: "easel-outline" as const,
+    color: colors.instructor,
+    route: "InstructorLogin" as const,
+  },
+  {
+    key: "admin",
+    title: "Administrator",
+    desc: "Instructors, courses & system records",
+    icon: "shield-checkmark-outline" as const,
+    color: colors.admin,
+    route: "AdminLogin" as const,
+  },
+];
+
 export default function HomeScreen({ navigation }: { navigation: Nav }) {
-  const {
-    studentData,
-    instructorData,
-    adminData,
-    hydrated,
-    signOutStudent,
-    signOutInstructor,
-    signOutAdmin,
-  } = useAuth();
+  const insets = useSafeAreaInsets();
+  const { studentData, instructorData, adminData, hydrated, signOutStudent, signOutInstructor, signOutAdmin } =
+    useAuth();
 
   if (!hydrated) {
     return (
-      <View style={[styles.centered, styles.loaderWrap]}>
-        <ActivityIndicator size="large" color="#1a365d" />
+      <View style={[styles.loaderWrap, { paddingTop: insets.top }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -38,110 +63,89 @@ export default function HomeScreen({ navigation }: { navigation: Nav }) {
   return (
     <View style={styles.root}>
       <AmbientBackground variant="home" />
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
-        <View style={styles.hero}>
-          <Text style={styles.brandMark}>UMS</Text>
-          <Text style={styles.title}>University Management</Text>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.lg }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <FadeInView>
+          <View style={styles.brandRow}>
+            <View style={styles.brandIcon}>
+              <Ionicons name="business-outline" size={22} color={colors.primary} />
+            </View>
+            <Text style={styles.brandMark}>UMS</Text>
+          </View>
+          <Text style={styles.title}>University{"\n"}Management</Text>
           <Text style={styles.tagline}>
-            Secure access for students, faculty, and administrators. Sign in with your existing account.
+            A modern portal for students, faculty, and administrators. Sign in to access your dashboard.
           </Text>
-        </View>
+        </FadeInView>
 
         {hasSession && (
-          <View style={styles.sessionCard}>
-            <Text style={styles.sessionTitle}>You’re signed in</Text>
-            <Text style={styles.sessionHint}>Continue where you left off.</Text>
+          <FadeInView delay={80} style={styles.sessionCard}>
+            <Text style={styles.sessionTitle}>Continue your session</Text>
             {studentData && (
-              <Pressable
-                style={styles.primaryBtn}
-                onPress={() => navigation.navigate("StudentTabs")}
-              >
-                <Text style={styles.primaryBtnText}>Continue as student</Text>
+              <Pressable style={styles.continueBtn} onPress={() => navigation.navigate("StudentTabs")}>
+                <Ionicons name="arrow-forward-circle" size={22} color="#fff" />
+                <Text style={styles.continueBtnText}>Student dashboard</Text>
               </Pressable>
             )}
             {instructorData && (
-              <Pressable
-                style={styles.primaryBtn}
-                onPress={() => navigation.navigate("InstructorTabs")}
-              >
-                <Text style={styles.primaryBtnText}>Continue as instructor</Text>
+              <Pressable style={[styles.continueBtn, { backgroundColor: colors.instructor }]} onPress={() => navigation.navigate("InstructorTabs")}>
+                <Ionicons name="arrow-forward-circle" size={22} color="#fff" />
+                <Text style={styles.continueBtnText}>Instructor dashboard</Text>
               </Pressable>
             )}
             {adminData && (
-              <Pressable
-                style={styles.primaryBtn}
-                onPress={() => navigation.navigate("AdminTabs")}
-              >
-                <Text style={styles.primaryBtnText}>Continue as administrator</Text>
+              <Pressable style={[styles.continueBtn, { backgroundColor: colors.admin }]} onPress={() => navigation.navigate("AdminTabs")}>
+                <Ionicons name="arrow-forward-circle" size={22} color="#fff" />
+                <Text style={styles.continueBtnText}>Admin dashboard</Text>
               </Pressable>
             )}
-          </View>
+          </FadeInView>
         )}
 
-        <Text style={styles.sectionEyebrow}>Get started</Text>
-        <Text style={styles.sectionTitle}>Choose your role</Text>
-        <Text style={styles.sectionSub}>
-          You’ll open the sign-in screen first. Need an account? You can register from there where your role allows it.
-        </Text>
+        <FadeInView delay={140}>
+          <Text style={styles.sectionEyebrow}>Get started</Text>
+          <Text style={styles.sectionTitle}>Choose your role</Text>
+        </FadeInView>
 
-        <Pressable
-          style={styles.roleCard}
-          onPress={() => navigation.navigate("StudentLogin")}
-          android_ripple={{ color: "#e2e8f0" }}
-        >
-          <View style={[styles.roleAccent, { backgroundColor: "#4f46e5" }]} />
-          <View style={styles.roleBody}>
-            <Text style={styles.roleName}>Student</Text>
-            <Text style={styles.roleDesc}>Courses, marks, attendance, and profile</Text>
-          </View>
-          <Text style={styles.roleChevron}>→</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.roleCard}
-          onPress={() => navigation.navigate("InstructorLogin")}
-          android_ripple={{ color: "#e2e8f0" }}
-        >
-          <View style={[styles.roleAccent, { backgroundColor: "#059669" }]} />
-          <View style={styles.roleBody}>
-            <Text style={styles.roleName}>Instructor</Text>
-            <Text style={styles.roleDesc}>Classes, attendance, and grading</Text>
-          </View>
-          <Text style={styles.roleChevron}>→</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.roleCard}
-          onPress={() => navigation.navigate("AdminLogin")}
-          android_ripple={{ color: "#e2e8f0" }}
-        >
-          <View style={[styles.roleAccent, { backgroundColor: "#c2410c" }]} />
-          <View style={styles.roleBody}>
-            <Text style={styles.roleName}>Administrator</Text>
-            <Text style={styles.roleDesc}>Instructors, courses, and system records</Text>
-          </View>
-          <Text style={styles.roleChevron}>→</Text>
-        </Pressable>
+        {roles.map((role, i) => (
+          <FadeInView key={role.key} delay={180 + i * 70}>
+            <Pressable
+              style={({ pressed }) => [styles.roleCard, pressed && styles.roleCardPressed]}
+              onPress={() => navigation.navigate(role.route)}
+            >
+              <View style={[styles.roleIconWrap, { backgroundColor: `${role.color}18` }]}>
+                <Ionicons name={role.icon} size={24} color={role.color} />
+              </View>
+              <View style={styles.roleBody}>
+                <Text style={styles.roleName}>{role.title}</Text>
+                <Text style={styles.roleDesc}>{role.desc}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            </Pressable>
+          </FadeInView>
+        ))}
 
         {hasSession && (
-          <View style={styles.signOutBlock}>
-            <Text style={styles.signOutEyebrow}>Session</Text>
+          <FadeInView delay={400} style={styles.signOutBlock}>
             {studentData && (
-              <Pressable style={styles.signOutBtn} onPress={() => void signOutStudent()}>
+              <Pressable onPress={() => void signOutStudent()}>
                 <Text style={styles.signOutText}>Sign out student</Text>
               </Pressable>
             )}
             {instructorData && (
-              <Pressable style={styles.signOutBtn} onPress={() => void signOutInstructor()}>
+              <Pressable onPress={() => void signOutInstructor()}>
                 <Text style={styles.signOutText}>Sign out instructor</Text>
               </Pressable>
             )}
             {adminData && (
-              <Pressable style={styles.signOutBtn} onPress={() => void signOutAdmin()}>
+              <Pressable onPress={() => void signOutAdmin()}>
                 <Text style={styles.signOutText}>Sign out administrator</Text>
               </Pressable>
             )}
-          </View>
+          </FadeInView>
         )}
       </ScrollView>
     </View>
@@ -149,103 +153,73 @@ export default function HomeScreen({ navigation }: { navigation: Nav }) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#f8fafc" },
-  scroll: { flex: 1, backgroundColor: "#f8fafc" },
-  container: {
-    padding: 24,
-    paddingTop: 48,
-    paddingBottom: 40,
-  },
-  loaderWrap: { flex: 1, backgroundColor: "#f8fafc" },
-  centered: { justifyContent: "center", alignItems: "center" },
-  hero: { marginBottom: 28 },
-  brandMark: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#1a365d",
-    letterSpacing: 2,
-    marginBottom: 10,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: "#0f172a",
-    letterSpacing: -0.8,
-    marginBottom: 10,
-  },
-  tagline: {
-    fontSize: 16,
-    color: "#64748b",
-    lineHeight: 24,
-    maxWidth: 400,
-  },
-  sessionCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 32,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  sessionTitle: { fontSize: 17, fontWeight: "700", color: "#0f172a", marginBottom: 4 },
-  sessionHint: { fontSize: 14, color: "#64748b", marginBottom: 16 },
-  primaryBtn: {
-    backgroundColor: "#1a365d",
-    paddingVertical: 14,
+  root: { flex: 1, backgroundColor: colors.background },
+  scroll: { flex: 1 },
+  container: { padding: spacing.lg, paddingBottom: 48 },
+  loaderWrap: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.background },
+  brandRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: spacing.md },
+  brandIcon: {
+    width: 40,
+    height: 40,
     borderRadius: 12,
-    marginBottom: 10,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  primaryBtnText: { color: "#fff", fontWeight: "700", fontSize: 16, textAlign: "center" },
+  brandMark: { fontSize: 14, fontWeight: "800", color: colors.primary, letterSpacing: 2 },
+  title: { ...typography.hero, color: colors.text, marginBottom: 12 },
+  tagline: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.lg, maxWidth: 340 },
+  sessionCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 10,
+    ...shadow.card,
+  },
+  sessionTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginBottom: 4 },
+  continueBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: colors.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: radius.md,
+  },
+  continueBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
   sectionEyebrow: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#94a3b8",
-    letterSpacing: 1.2,
+    ...typography.caption,
+    color: colors.textMuted,
     textTransform: "uppercase",
     marginBottom: 6,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#0f172a",
-    marginBottom: 8,
-  },
-  sectionSub: {
-    fontSize: 14,
-    color: "#64748b",
-    lineHeight: 20,
-    marginBottom: 18,
-  },
+  sectionTitle: { fontSize: 20, fontWeight: "700", color: colors.text, marginBottom: spacing.md },
   roleCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     marginBottom: 12,
+    padding: spacing.md,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
-    overflow: "hidden",
-    paddingVertical: 4,
-    paddingRight: 16,
+    borderColor: colors.border,
+    ...shadow.soft,
   },
-  roleAccent: { width: 5, alignSelf: "stretch", borderRadius: 2, marginVertical: 8, marginLeft: 8 },
-  roleBody: { flex: 1, paddingVertical: 14, paddingHorizontal: 14 },
-  roleName: { fontSize: 17, fontWeight: "700", color: "#0f172a", marginBottom: 4 },
-  roleDesc: { fontSize: 14, color: "#64748b", lineHeight: 20 },
-  roleChevron: { fontSize: 18, color: "#94a3b8", fontWeight: "600" },
-  signOutBlock: { marginTop: 32, paddingTop: 24, borderTopWidth: 1, borderTopColor: "#e2e8f0" },
-  signOutEyebrow: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#94a3b8",
-    letterSpacing: 1,
-    marginBottom: 12,
+  roleCardPressed: { backgroundColor: colors.primarySoft, borderColor: colors.primaryMuted },
+  roleIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
   },
-  signOutBtn: { paddingVertical: 12 },
-  signOutText: { color: "#b91c1c", fontWeight: "600", fontSize: 15, textAlign: "center" },
+  roleBody: { flex: 1 },
+  roleName: { fontSize: 17, fontWeight: "700", color: colors.text, marginBottom: 4 },
+  roleDesc: { fontSize: 14, color: colors.textSecondary, lineHeight: 20 },
+  signOutBlock: { marginTop: spacing.xl, alignItems: "center", gap: 12 },
+  signOutText: { color: colors.danger, fontWeight: "600", fontSize: 14 },
 });

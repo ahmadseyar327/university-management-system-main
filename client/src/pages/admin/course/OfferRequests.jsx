@@ -70,7 +70,7 @@ export default function OfferRequests() {
         subtitle={`${rows.length} request(s) awaiting review`}
       >
         <div className="inst-table-wrap">
-          <table className="inst-table">
+          <table className="inst-table inst-table-responsive">
             <thead>
               <tr>
                 <th>Instructor</th>
@@ -85,12 +85,12 @@ export default function OfferRequests() {
               {rows.length ? (
                 rows.map((row) => (
                   <tr key={row._id}>
-                    <td>{row.instructorName}</td>
-                    <td>{row.instructorEmail}</td>
-                    <td>{row.courseTitle}</td>
-                    <td>{row.courseCode}</td>
-                    <td>{new Date(row.createdAt).toLocaleString()}</td>
-                    <td>
+                    <td data-label="Instructor">{row.instructorName}</td>
+                    <td data-label="Email">{row.instructorEmail}</td>
+                    <td data-label="Course">{row.courseTitle}</td>
+                    <td data-label="Code">{row.courseCode}</td>
+                    <td data-label="Requested">{new Date(row.createdAt).toLocaleString()}</td>
+                    <td data-label="Action">
                       <div className="inst-action-group">
                         <button
                           type="button"

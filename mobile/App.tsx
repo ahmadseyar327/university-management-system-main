@@ -11,7 +11,7 @@ export default function App() {
       <AuthProvider>
         <AppNavigator />
         <ToastHost />
-        <StatusBar style="dark" />
+        <StatusBar style="dark" backgroundColor="#f0f4ff" />
       </AuthProvider>
     </SafeAreaProvider>
   );

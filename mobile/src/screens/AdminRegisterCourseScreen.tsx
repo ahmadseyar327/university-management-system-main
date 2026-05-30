@@ -1,12 +1,13 @@
 import type { DrawerScreenProps } from "@react-navigation/drawer";
 import React, { useRef, useState } from "react";
-import { Keyboard, Platform, ScrollView, StyleSheet, Text } from "react-native";
+import { Keyboard, Platform, StyleSheet, View } from "react-native";
 import { courseEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
-import { FormTextInput, PrimaryButton } from "../components";
-import SimpleSelect, { SelectOption } from "../components/SimpleSelect";
+import { FormTextInput, PrimaryButton, ScreenContainer, ScreenHeader, SimpleSelect } from "../components";
+import type { SelectOption } from "../components/SimpleSelect";
 import { useAuth } from "../contexts/AuthContext";
 import type { AdminTabParamList } from "../navigation/types";
+import { colors, radius, shadow, spacing } from "../theme";
 import { mongoId } from "../utils/mongoId";
 import { toastError, toastSuccess } from "../utils/toasts";
 
@@ -62,58 +63,65 @@ export default function AdminRegisterCourseScreen({ navigation }: Props) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>Register course</Text>
-      <FormTextInput
-        label="Title"
-        value={title}
-        onChangeText={(t) => {
-          ref.current.title = t;
-          setTitle(t);
-        }}
-      />
-      <FormTextInput
-        label="Code"
-        value={code}
-        onChangeText={(t) => {
-          ref.current.code = t;
-          setCode(t);
-        }}
-        autoCapitalize="characters"
-      />
-      <SimpleSelect
-        label="Type"
-        options={typeOpts}
-        value={type}
-        onChange={(v) => {
-          ref.current.type = v;
-          setType(v);
-        }}
-      />
-      <FormTextInput
-        label="Credit hours"
-        value={creditHours}
-        onChangeText={(t) => {
-          ref.current.creditHours = t;
-          setCreditHours(t);
-        }}
-        keyboardType="numeric"
-      />
-      <FormTextInput
-        label="Fee"
-        value={fee}
-        onChangeText={(t) => {
-          ref.current.fee = t;
-          setFee(t);
-        }}
-        keyboardType="decimal-pad"
-      />
-      <PrimaryButton title="Register course" loading={loading} onPress={() => void submit()} />
-    </ScrollView>
+    <ScreenContainer>
+      <ScreenHeader title="Register course" subtitle="Add a new course to the catalog." />
+      <View style={[styles.card, shadow.card]}>
+        <FormTextInput
+          label="Title"
+          value={title}
+          onChangeText={(t) => {
+            ref.current.title = t;
+            setTitle(t);
+          }}
+        />
+        <FormTextInput
+          label="Code"
+          value={code}
+          onChangeText={(t) => {
+            ref.current.code = t;
+            setCode(t);
+          }}
+          autoCapitalize="characters"
+        />
+        <SimpleSelect
+          label="Type"
+          options={typeOpts}
+          value={type}
+          onChange={(v) => {
+            ref.current.type = v;
+            setType(v);
+          }}
+        />
+        <FormTextInput
+          label="Credit hours"
+          value={creditHours}
+          onChangeText={(t) => {
+            ref.current.creditHours = t;
+            setCreditHours(t);
+          }}
+          keyboardType="numeric"
+        />
+        <FormTextInput
+          label="Fee"
+          value={fee}
+          onChangeText={(t) => {
+            ref.current.fee = t;
+            setFee(t);
+          }}
+          keyboardType="decimal-pad"
+        />
+        <PrimaryButton title="Register course" loading={loading} onPress={() => void submit()} />
+      </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, paddingBottom: 40, backgroundColor: "#fff" },
-  title: { fontSize: 20, fontWeight: "700", marginBottom: 16, color: "#1a202c" },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
 });

@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import type { DrawerScreenProps } from "@react-navigation/drawer";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useMemo, useRef, useState } from "react";
@@ -12,10 +13,12 @@ import {
 } from "react-native";
 import { courseEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
+import { EmptyState, SlideOverDetail } from "../components";
 import LoadingView from "../components/LoadingView";
-import SlideOverDetail from "../components/SlideOverDetail";
 import { useAuth } from "../contexts/AuthContext";
 import type { InstructorTabParamList } from "../navigation/types";
+import { colors, radius, roleThemes, spacing } from "../theme";
+import { listStyles } from "../theme/listStyles";
 import { mongoId } from "../utils/mongoId";
 import { toastError, toastSuccess } from "../utils/toasts";
 
@@ -135,23 +138,29 @@ export default function InstructorCoursesScreen(_props: Props) {
   if (loading && catalog.length === 0) return <LoadingView />;
 
   return (
-    <View style={styles.screen}>
+    <View style={listStyles.screen}>
       <FlatList
         data={listRows}
         keyExtractor={(item, i) => mongoId(item) || String(i)}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={styles.list}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.instructor} colors={[colors.instructor]} />
+        }
+        contentContainerStyle={listStyles.list}
         ListHeaderComponent={<Text style={styles.header}>Courses catalog</Text>}
-        ListEmptyComponent={<Text style={styles.empty}>No courses found.</Text>}
-        ItemSeparatorComponent={() => <View style={styles.sep} />}
+        ListEmptyComponent={
+          <View style={listStyles.emptyWrap}>
+            <EmptyState icon="library-outline" title="No courses found." />
+          </View>
+        }
+        ItemSeparatorComponent={() => <View style={listStyles.sep} />}
         renderItem={({ item }) => (
           <Pressable
-            style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+            style={({ pressed }) => [listStyles.row, pressed && listStyles.rowPressed]}
             onPress={() => setDetail(item)}
-            android_ripple={{ color: "#e2e8f0" }}
+            android_ripple={{ color: colors.border }}
           >
             <View style={styles.rowLeft}>
-              <Text style={styles.rowName} numberOfLines={1}>
+              <Text style={listStyles.rowName} numberOfLines={1}>
                 {titleOf(item)}
               </Text>
               {item.__status === "approved" ? (
@@ -160,7 +169,7 @@ export default function InstructorCoursesScreen(_props: Props) {
                 <Text style={styles.pendingTag}>Pending admin approval</Text>
               ) : null}
             </View>
-            <Text style={styles.chev}>›</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.instructor} />
           </Pressable>
         )}
       />
@@ -168,20 +177,20 @@ export default function InstructorCoursesScreen(_props: Props) {
       <SlideOverDetail open={detail !== null} onClosed={() => setDetail(null)}>
         {detail ? (
           <>
-            <Text style={styles.detailEyebrow}>Course</Text>
-            <Text style={styles.detailTitle}>{titleOf(detail)}</Text>
-            <View style={styles.detailCard}>
-              <Text style={styles.k}>Code</Text>
-              <Text style={styles.v}>{String(detail.code ?? "—")}</Text>
-              <View style={styles.divider} />
-              <Text style={styles.k}>Type</Text>
-              <Text style={styles.v}>{String(detail.type ?? "—")}</Text>
-              <View style={styles.divider} />
-              <Text style={styles.k}>Credit hours</Text>
-              <Text style={styles.v}>{String(detail.creditHours ?? "—")}</Text>
-              <View style={styles.divider} />
-              <Text style={styles.k}>Fee</Text>
-              <Text style={styles.v}>{String(detail.fee ?? "—")}</Text>
+            <Text style={listStyles.detailEyebrow}>Course</Text>
+            <Text style={listStyles.detailTitle}>{titleOf(detail)}</Text>
+            <View style={listStyles.detailCard}>
+              <Text style={listStyles.k}>Code</Text>
+              <Text style={listStyles.v}>{String(detail.code ?? "—")}</Text>
+              <View style={listStyles.divider} />
+              <Text style={listStyles.k}>Type</Text>
+              <Text style={listStyles.v}>{String(detail.type ?? "—")}</Text>
+              <View style={listStyles.divider} />
+              <Text style={listStyles.k}>Credit hours</Text>
+              <Text style={listStyles.v}>{String(detail.creditHours ?? "—")}</Text>
+              <View style={listStyles.divider} />
+              <Text style={listStyles.k}>Fee</Text>
+              <Text style={listStyles.v}>{String(detail.fee ?? "—")}</Text>
             </View>
             {statusMap.get(mongoId(detail)) === "approved" ? (
               <View style={styles.approvedBtn}>
@@ -198,7 +207,7 @@ export default function InstructorCoursesScreen(_props: Props) {
                 onPress={() => void requestOffer(detail)}
               >
                 {requestingId === mongoId(detail) ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={colors.textInverse} />
                 ) : (
                   <Text style={styles.primaryTxt}>Request to teach this course</Text>
                 )}
@@ -212,74 +221,38 @@ export default function InstructorCoursesScreen(_props: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#f1f5f9" },
-  list: { paddingVertical: 8, paddingBottom: 40 },
-  header: { paddingHorizontal: 20, paddingBottom: 8, color: "#64748b", fontWeight: "700", fontSize: 14 },
-  empty: { textAlign: "center", color: "#718096", marginTop: 28 },
-  sep: { height: 1, backgroundColor: "#e2e8f0", marginLeft: 20 },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-  },
-  rowPressed: { backgroundColor: "#f8fafc" },
-  rowLeft: { flex: 1, marginRight: 10 },
-  rowName: { fontSize: 17, fontWeight: "600", color: "#0f172a" },
-  approvedTag: { marginTop: 6, color: "#047857", fontSize: 12, fontWeight: "700" },
-  pendingTag: { marginTop: 6, color: "#92400e", fontSize: 12, fontWeight: "700" },
-  chev: { color: "#94a3b8", fontSize: 24, lineHeight: 24 },
-  detailEyebrow: {
-    fontSize: 12,
+  header: {
+    paddingBottom: spacing.sm,
+    color: colors.textSecondary,
     fontWeight: "700",
-    color: "#94a3b8",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    marginBottom: 8,
+    fontSize: 14,
   },
-  detailTitle: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: "#0f172a",
-    letterSpacing: -0.5,
-    marginBottom: 20,
-  },
-  detailCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    marginBottom: 20,
-  },
-  k: { fontSize: 12, fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", marginBottom: 4 },
-  v: { fontSize: 16, fontWeight: "600", color: "#0f172a", marginBottom: 14 },
-  divider: { height: 1, backgroundColor: "#f1f5f9", marginVertical: 4 },
+  rowLeft: { flex: 1, marginRight: 10 },
+  approvedTag: { marginTop: 6, color: colors.instructor, fontSize: 12, fontWeight: "700" },
+  pendingTag: { marginTop: 6, color: colors.warning, fontSize: 12, fontWeight: "700" },
   primaryBtn: {
-    backgroundColor: "#0f766e",
-    borderRadius: 14,
+    backgroundColor: roleThemes.instructor.accent,
+    borderRadius: radius.md,
     paddingVertical: 14,
     alignItems: "center",
   },
-  primaryTxt: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  primaryTxt: { color: colors.textInverse, fontWeight: "700", fontSize: 16 },
   approvedBtn: {
-    backgroundColor: "#ecfdf5",
-    borderRadius: 14,
+    backgroundColor: roleThemes.instructor.accentSoft,
+    borderRadius: radius.md,
     paddingVertical: 14,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#86efac",
+    borderColor: colors.instructor,
   },
-  approvedTxt: { color: "#047857", fontWeight: "700", fontSize: 16 },
+  approvedTxt: { color: colors.instructor, fontWeight: "700", fontSize: 16 },
   pendingBtn: {
-    backgroundColor: "#fffbeb",
-    borderRadius: 14,
+    backgroundColor: colors.warningSoft,
+    borderRadius: radius.md,
     paddingVertical: 14,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#fcd34d",
+    borderColor: colors.warning,
   },
-  pendingTxt: { color: "#92400e", fontWeight: "700", fontSize: 16 },
+  pendingTxt: { color: colors.warning, fontWeight: "700", fontSize: 16 },
 });

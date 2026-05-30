@@ -7,6 +7,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { colors, radius, shadow, spacing } from "../theme";
 
 export type SelectOption = { label: string; value: string };
 
@@ -45,7 +46,7 @@ export default function SimpleSelect({
       >
         <View style={styles.modalRoot}>
           <Pressable style={styles.backdrop} onPress={() => setOpen(false)} />
-          <View style={styles.sheet}>
+          <View style={[styles.sheet, shadow.card]}>
             <Text style={styles.sheetTitle}>{label}</Text>
             <FlatList
               data={options}
@@ -71,45 +72,42 @@ export default function SimpleSelect({
 
 const styles = StyleSheet.create({
   wrap: { marginBottom: 14 },
-  label: { fontSize: 13, fontWeight: "600", color: "#4a5568", marginBottom: 6 },
+  label: { fontSize: 13, fontWeight: "600", color: colors.textSecondary, marginBottom: 6 },
   field: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 10,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: "#fff",
+    backgroundColor: colors.surface,
   },
-  fieldText: { fontSize: 16, color: "#1a202c", flex: 1 },
-  placeholder: { fontSize: 16, color: "#a0aec0", flex: 1 },
-  chev: { fontSize: 14, color: "#718096" },
+  fieldText: { fontSize: 16, color: colors.text, flex: 1 },
+  placeholder: { fontSize: 16, color: colors.textMuted, flex: 1 },
+  chev: { fontSize: 14, color: colors.textSecondary },
   modalRoot: { flex: 1, justifyContent: "center" },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: colors.overlay,
   },
   sheet: {
-    marginHorizontal: 16,
+    marginHorizontal: spacing.md,
     maxHeight: "70%",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingVertical: 8,
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
   },
   sheetTitle: {
     fontSize: 16,
     fontWeight: "700",
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.md,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#edf2f7",
+    borderBottomColor: colors.borderLight,
+    color: colors.text,
   },
-  option: { paddingHorizontal: 16, paddingVertical: 14 },
-  optionText: { fontSize: 16, color: "#2d3748" },
+  option: { paddingHorizontal: spacing.md, paddingVertical: 14 },
+  optionText: { fontSize: 16, color: colors.text },
 });

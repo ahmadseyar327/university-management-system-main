@@ -1,6 +1,5 @@
 import type { StackNavigationProp } from "@react-navigation/stack";
 import React, { useState } from "react";
-import { StyleSheet } from "react-native";
 import { adminEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
 import { AuthScreenShell, FormTextInput, PrimaryButton } from "../components";

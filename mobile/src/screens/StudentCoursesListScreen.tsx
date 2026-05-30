@@ -2,13 +2,15 @@ import { Ionicons } from "@expo/vector-icons";
 import type { DrawerScreenProps } from "@react-navigation/drawer";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useRef, useState } from "react";
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import { courseEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
+import { EmptyState, SlideOverDetail } from "../components";
 import LoadingView from "../components/LoadingView";
-import SlideOverDetail from "../components/SlideOverDetail";
 import { useAuth } from "../contexts/AuthContext";
 import type { StudentTabParamList } from "../navigation/types";
+import { colors } from "../theme";
+import { listStyles } from "../theme/listStyles";
 import { mongoId } from "../utils/mongoId";
 import { toastError } from "../utils/toasts";
 
@@ -66,24 +68,30 @@ export default function StudentCoursesListScreen(_props: Props) {
   if (loading && courses.length === 0) return <LoadingView />;
 
   return (
-    <View style={styles.screen}>
+    <View style={listStyles.screen}>
       <FlatList
         data={courses}
         keyExtractor={(item, i) => String(item._id ?? i)}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={<Text style={styles.empty}>No registered courses yet.</Text>}
-        ItemSeparatorComponent={() => <View style={styles.sep} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
+        }
+        contentContainerStyle={listStyles.listFlush}
+        ListEmptyComponent={
+          <View style={listStyles.emptyWrap}>
+            <EmptyState icon="book-outline" title="No registered courses yet." />
+          </View>
+        }
+        ItemSeparatorComponent={() => <View style={listStyles.sep} />}
         renderItem={({ item }) => (
           <Pressable
-            style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+            style={({ pressed }) => [listStyles.row, pressed && listStyles.rowPressed]}
             onPress={() => setDetail(item)}
-            android_ripple={{ color: "#e2e8f0" }}
+            android_ripple={{ color: colors.border }}
           >
-            <Text style={styles.rowName} numberOfLines={1}>
+            <Text style={listStyles.rowName} numberOfLines={1}>
               {courseTitle(item)}
             </Text>
-            <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+            <Ionicons name="chevron-forward" size={20} color={colors.primary} />
           </Pressable>
         )}
       />
@@ -91,26 +99,26 @@ export default function StudentCoursesListScreen(_props: Props) {
       <SlideOverDetail open={detail !== null} onClosed={() => setDetail(null)}>
         {detail ? (
           <>
-            <Text style={styles.detailEyebrow}>Course</Text>
-            <Text style={styles.detailTitle}>{courseTitle(detail)}</Text>
-            <View style={styles.detailCard}>
-              <Text style={styles.k}>Code</Text>
-              <Text style={styles.v}>{String(detail.code ?? "ï¿½")}</Text>
-              <View style={styles.divider} />
-              <Text style={styles.k}>Type</Text>
-              <Text style={styles.v}>{String(detail.type ?? "ï¿½")}</Text>
-              <View style={styles.divider} />
-              <Text style={styles.k}>Credit hours</Text>
-              <Text style={styles.v}>{String(detail.creditHours ?? "ï¿½")}</Text>
-              <View style={styles.divider} />
-              <Text style={styles.k}>Fee</Text>
-              <Text style={styles.v}>{String(detail.fee ?? "ï¿½")}</Text>
-              <View style={styles.divider} />
-              <Text style={styles.k}>Instructor</Text>
-              <Text style={styles.v}>{String(detail.instructorName ?? "ï¿½")}</Text>
-              <View style={styles.divider} />
-              <Text style={styles.k}>Registered</Text>
-              <Text style={styles.v}>{String(detail.createdAt ?? "ï¿½")}</Text>
+            <Text style={listStyles.detailEyebrow}>Course</Text>
+            <Text style={listStyles.detailTitle}>{courseTitle(detail)}</Text>
+            <View style={listStyles.detailCard}>
+              <Text style={listStyles.k}>Code</Text>
+              <Text style={listStyles.v}>{String(detail.code ?? "—")}</Text>
+              <View style={listStyles.divider} />
+              <Text style={listStyles.k}>Type</Text>
+              <Text style={listStyles.v}>{String(detail.type ?? "—")}</Text>
+              <View style={listStyles.divider} />
+              <Text style={listStyles.k}>Credit hours</Text>
+              <Text style={listStyles.v}>{String(detail.creditHours ?? "—")}</Text>
+              <View style={listStyles.divider} />
+              <Text style={listStyles.k}>Fee</Text>
+              <Text style={listStyles.v}>{String(detail.fee ?? "—")}</Text>
+              <View style={listStyles.divider} />
+              <Text style={listStyles.k}>Instructor</Text>
+              <Text style={listStyles.v}>{String(detail.instructorName ?? "—")}</Text>
+              <View style={listStyles.divider} />
+              <Text style={listStyles.k}>Registered</Text>
+              <Text style={listStyles.v}>{String(detail.createdAt ?? "—")}</Text>
             </View>
           </>
         ) : null}
@@ -118,45 +126,3 @@ export default function StudentCoursesListScreen(_props: Props) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#f1f5f9" },
-  list: { paddingVertical: 8, paddingBottom: 40 },
-  empty: { textAlign: "center", color: "#64748b", marginTop: 42, fontSize: 15 },
-  sep: { height: 1, backgroundColor: "#e2e8f0", marginLeft: 20 },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    backgroundColor: "#fff",
-  },
-  rowPressed: { backgroundColor: "#f8fafc" },
-  rowName: { flex: 1, fontSize: 17, fontWeight: "600", color: "#0f172a", marginRight: 8 },
-  detailEyebrow: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#94a3b8",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    marginBottom: 8,
-  },
-  detailTitle: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: "#0f172a",
-    letterSpacing: -0.5,
-    marginBottom: 20,
-  },
-  detailCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  k: { fontSize: 12, fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", marginBottom: 4 },
-  v: { fontSize: 16, fontWeight: "600", color: "#0f172a", marginBottom: 14 },
-  divider: { height: 1, backgroundColor: "#f1f5f9", marginVertical: 4 },
-});

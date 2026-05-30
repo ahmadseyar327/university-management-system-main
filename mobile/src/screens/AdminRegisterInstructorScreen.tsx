@@ -1,10 +1,11 @@
 import type { DrawerScreenProps } from "@react-navigation/drawer";
 import React, { useRef, useState } from "react";
-import { Keyboard, Platform, ScrollView, StyleSheet, Text } from "react-native";
+import { Keyboard, Platform, StyleSheet, View } from "react-native";
 import { instructorEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
-import { FormTextInput, PrimaryButton } from "../components";
+import { FormTextInput, PrimaryButton, ScreenContainer, ScreenHeader } from "../components";
 import type { AdminTabParamList } from "../navigation/types";
+import { colors, radius, shadow, spacing } from "../theme";
 import { toastError, toastSuccess } from "../utils/toasts";
 
 type Props = DrawerScreenProps<AdminTabParamList, "AdminRegInstructor">;
@@ -51,51 +52,33 @@ export default function AdminRegisterInstructorScreen({ navigation }: Props) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>Register instructor</Text>
-      <FormTextInput
-        label="First name"
-        value={fname}
-        onChangeText={(t) => {
-          formRef.current.fname = t;
-          setFname(t);
-        }}
-        autoCapitalize="words"
-      />
-      <FormTextInput
-        label="Last name"
-        value={lname}
-        onChangeText={(t) => {
-          formRef.current.lname = t;
-          setLname(t);
-        }}
-        autoCapitalize="words"
-      />
-      <FormTextInput
-        label="Email"
-        value={email}
-        onChangeText={(t) => {
-          formRef.current.email = t;
-          setEmail(t);
-        }}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
-      <FormTextInput
-        label="Password"
-        value={password}
-        onChangeText={(t) => {
-          formRef.current.password = t;
-          setPassword(t);
-        }}
-        secureTextEntry
-      />
-      <PrimaryButton title="Register" loading={loading} onPress={() => void submit()} />
-    </ScrollView>
+    <ScreenContainer>
+      <ScreenHeader title="Register instructor" subtitle="Create a new faculty account." />
+      <View style={[styles.card, shadow.card]}>
+        <View style={styles.row}>
+          <View style={styles.half}>
+            <FormTextInput label="First name" value={fname} onChangeText={(t) => { formRef.current.fname = t; setFname(t); }} autoCapitalize="words" />
+          </View>
+          <View style={styles.half}>
+            <FormTextInput label="Last name" value={lname} onChangeText={(t) => { formRef.current.lname = t; setLname(t); }} autoCapitalize="words" />
+          </View>
+        </View>
+        <FormTextInput label="Email" value={email} onChangeText={(t) => { formRef.current.email = t; setEmail(t); }} autoCapitalize="none" keyboardType="email-address" />
+        <FormTextInput label="Password" value={password} onChangeText={(t) => { formRef.current.password = t; setPassword(t); }} secureTextEntry />
+        <PrimaryButton title="Register" loading={loading} onPress={() => void submit()} />
+      </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, paddingBottom: 40, backgroundColor: "#fff" },
-  title: { fontSize: 20, fontWeight: "700", marginBottom: 16, color: "#1a202c" },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  row: { flexDirection: "row", marginHorizontal: -6 },
+  half: { flex: 1, paddingHorizontal: 6 },
 });

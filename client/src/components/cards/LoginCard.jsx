@@ -3,15 +3,15 @@ import { Link } from 'react-router-dom';
 
 export default function LoginCard({ title, subtitle, children, backTo = '/', backLabel = 'Back to home' }) {
   return (
-    <div className="w-full max-w-md auth-card-enter">
+    <div className="w-full max-w-md auth-card-enter px-1 sm:px-0">
       <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-blue-100 overflow-hidden">
-        <div className="bg-blue-700 text-white text-center px-6 py-6 auth-card-header">
-          <h1 className="text-2xl font-bold m-0">{title}</h1>
+        <div className="bg-blue-700 text-white text-center px-5 py-5 sm:px-6 sm:py-6 auth-card-header">
+          <h1 className="text-xl sm:text-2xl font-bold m-0">{title}</h1>
           {subtitle ? (
             <p className="text-blue-100 text-sm mt-1 mb-0">{subtitle}</p>
           ) : null}
         </div>
-        <div className="px-8 py-7">{children}</div>
+        <div className="px-5 py-6 sm:px-8 sm:py-7">{children}</div>
       </div>
       <Link
         to={backTo}

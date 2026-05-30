@@ -13,10 +13,12 @@ import {
 } from "react-native";
 import { courseEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
+import { EmptyState, ScreenContainer, ScreenHeader, SlideOverDetail } from "../components";
 import LoadingView from "../components/LoadingView";
-import SlideOverDetail from "../components/SlideOverDetail";
 import { useAuth } from "../contexts/AuthContext";
 import type { AdminTabParamList } from "../navigation/types";
+import { colors, radius, shadow, spacing } from "../theme";
+import { listStyles } from "../theme/listStyles";
 import { mongoId } from "../utils/mongoId";
 import { toastError, toastSuccess } from "../utils/toasts";
 
@@ -97,30 +99,40 @@ export default function AdminOfferRequestsScreen(_props: Props) {
   if (loading && rows.length === 0) return <LoadingView />;
 
   return (
-    <View style={styles.screen}>
+    <ScreenContainer scroll={false} contentContainerStyle={styles.container}>
+      <ScreenHeader
+        title="Offer requests"
+        subtitle="Review instructor requests to teach courses."
+      />
       <FlatList
         data={rows}
         keyExtractor={(item, i) => mongoId(item) || String(i)}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
+        }
         contentContainerStyle={styles.list}
-        ListHeaderComponent={<Text style={styles.header}>Pending instructor requests</Text>}
-        ListEmptyComponent={<Text style={styles.empty}>No pending requests.</Text>}
-        ItemSeparatorComponent={() => <View style={styles.sep} />}
+        ListEmptyComponent={
+          <EmptyState icon="mail-outline" title="No pending requests." message="All offer requests have been reviewed." />
+        }
         renderItem={({ item }) => (
           <Pressable
-            style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+            style={({ pressed }) => [styles.card, shadow.soft, pressed && styles.cardPressed]}
             onPress={() => setDetail(item)}
-            android_ripple={{ color: "#e2e8f0" }}
+            android_ripple={{ color: colors.border }}
           >
-            <View style={styles.rowLeft}>
-              <Text style={styles.rowName} numberOfLines={1}>
+            <View style={styles.cardTop}>
+              <Text style={styles.cardName} numberOfLines={1}>
                 {String(item.instructorName ?? "Unknown instructor")}
               </Text>
-              <Text style={styles.rowSub} numberOfLines={1}>
-                wants {String(item.courseTitle ?? "a course")}
-              </Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.primary} />
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+            <Text style={styles.cardSub} numberOfLines={1}>
+              wants {String(item.courseTitle ?? "a course")}
+            </Text>
+            <View style={styles.cardMeta}>
+              <Text style={styles.metaLabel}>Course code</Text>
+              <Text style={styles.metaValue}>{String(item.courseCode ?? "—")}</Text>
+            </View>
           </Pressable>
         )}
       />
@@ -128,20 +140,20 @@ export default function AdminOfferRequestsScreen(_props: Props) {
       <SlideOverDetail open={detail !== null} onClosed={() => setDetail(null)}>
         {detail ? (
           <>
-            <Text style={styles.detailEyebrow}>Offer request</Text>
-            <Text style={styles.detailTitle}>{String(detail.instructorName ?? "Instructor")}</Text>
-            <View style={styles.detailCard}>
-              <Text style={styles.k}>Course</Text>
-              <Text style={styles.v}>{String(detail.courseTitle ?? "—")}</Text>
-              <View style={styles.divider} />
-              <Text style={styles.k}>Course code</Text>
-              <Text style={styles.v}>{String(detail.courseCode ?? "—")}</Text>
-              <View style={styles.divider} />
-              <Text style={styles.k}>Instructor email</Text>
-              <Text style={styles.v}>{String(detail.instructorEmail ?? "—")}</Text>
-              <View style={styles.divider} />
-              <Text style={styles.k}>Requested at</Text>
-              <Text style={styles.v}>{String(detail.createdAt ?? "—")}</Text>
+            <Text style={listStyles.detailEyebrow}>Offer request</Text>
+            <Text style={listStyles.detailTitle}>{String(detail.instructorName ?? "Instructor")}</Text>
+            <View style={listStyles.detailCard}>
+              <Text style={listStyles.k}>Course</Text>
+              <Text style={listStyles.v}>{String(detail.courseTitle ?? "—")}</Text>
+              <View style={listStyles.divider} />
+              <Text style={listStyles.k}>Course code</Text>
+              <Text style={listStyles.v}>{String(detail.courseCode ?? "—")}</Text>
+              <View style={listStyles.divider} />
+              <Text style={listStyles.k}>Instructor email</Text>
+              <Text style={listStyles.v}>{String(detail.instructorEmail ?? "—")}</Text>
+              <View style={listStyles.divider} />
+              <Text style={listStyles.k}>Requested at</Text>
+              <Text style={listStyles.v}>{String(detail.createdAt ?? "—")}</Text>
             </View>
             <View style={styles.btnRow}>
               <Pressable
@@ -149,71 +161,64 @@ export default function AdminOfferRequestsScreen(_props: Props) {
                 disabled={busyId === mongoId(detail)}
                 onPress={() => void review("decline", detail)}
               >
-                {busyId === mongoId(detail) ? <ActivityIndicator color="#b91c1c" /> : <Text style={styles.declineTxt}>Decline</Text>}
+                {busyId === mongoId(detail) ? (
+                  <ActivityIndicator color={colors.danger} />
+                ) : (
+                  <Text style={styles.declineTxt}>Decline</Text>
+                )}
               </Pressable>
               <Pressable
                 style={[styles.btn, styles.approveBtn]}
                 disabled={busyId === mongoId(detail)}
                 onPress={() => void review("approve", detail)}
               >
-                {busyId === mongoId(detail) ? <ActivityIndicator color="#fff" /> : <Text style={styles.approveTxt}>Approve</Text>}
+                {busyId === mongoId(detail) ? (
+                  <ActivityIndicator color={colors.textInverse} />
+                ) : (
+                  <Text style={styles.approveTxt}>Approve</Text>
+                )}
               </Pressable>
             </View>
           </>
         ) : null}
       </SlideOverDetail>
-    </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#f1f5f9" },
-  list: { paddingVertical: 8, paddingBottom: 40 },
-  header: { paddingHorizontal: 20, paddingBottom: 8, color: "#64748b", fontWeight: "700", fontSize: 14 },
-  empty: { textAlign: "center", color: "#718096", marginTop: 28 },
-  sep: { height: 1, backgroundColor: "#e2e8f0", marginLeft: 20 },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-  },
-  rowPressed: { backgroundColor: "#f8fafc" },
-  rowLeft: { flex: 1, marginRight: 10 },
-  rowName: { fontSize: 17, fontWeight: "600", color: "#0f172a" },
-  rowSub: { marginTop: 4, color: "#64748b", fontSize: 13 },
-  detailEyebrow: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#94a3b8",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    marginBottom: 8,
-  },
-  detailTitle: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: "#0f172a",
-    letterSpacing: -0.5,
-    marginBottom: 20,
-  },
-  detailCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 18,
+  container: { flex: 1, paddingBottom: 0 },
+  list: { paddingBottom: 40, gap: spacing.sm },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.md,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
-    marginBottom: 18,
+    borderColor: colors.border,
+    marginBottom: spacing.sm,
   },
-  k: { fontSize: 12, fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", marginBottom: 4 },
-  v: { fontSize: 16, fontWeight: "600", color: "#0f172a", marginBottom: 14 },
-  divider: { height: 1, backgroundColor: "#f1f5f9", marginVertical: 4 },
+  cardPressed: { backgroundColor: colors.primarySoft },
+  cardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  cardName: { flex: 1, fontSize: 16, fontWeight: "700", color: colors.text, marginRight: 8 },
+  cardSub: { marginTop: 4, color: colors.textSecondary, fontSize: 13 },
+  cardMeta: {
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  metaLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  metaValue: { fontSize: 14, fontWeight: "600", color: colors.text, marginTop: 2 },
   btnRow: { flexDirection: "row", gap: 10 },
-  btn: { flex: 1, borderRadius: 12, paddingVertical: 13, alignItems: "center", justifyContent: "center" },
-  declineBtn: { backgroundColor: "#fef2f2", borderWidth: 1, borderColor: "#fecaca" },
-  approveBtn: { backgroundColor: "#1d4ed8" },
-  declineTxt: { color: "#b91c1c", fontWeight: "700", fontSize: 15 },
-  approveTxt: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  btn: { flex: 1, borderRadius: radius.sm, paddingVertical: 13, alignItems: "center", justifyContent: "center" },
+  declineBtn: { backgroundColor: colors.dangerSoft, borderWidth: 1, borderColor: colors.danger },
+  approveBtn: { backgroundColor: colors.primary },
+  declineTxt: { color: colors.danger, fontWeight: "700", fontSize: 15 },
+  approveTxt: { color: colors.textInverse, fontWeight: "700", fontSize: 15 },
 });

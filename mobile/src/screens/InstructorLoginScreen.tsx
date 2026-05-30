@@ -6,6 +6,7 @@ import { fetchResponse } from "../api/service";
 import { AuthScreenShell, FormTextInput, PrimaryButton } from "../components";
 import { useAuth } from "../contexts/AuthContext";
 import type { RootStackParamList } from "../navigation/types";
+import { colors, radius, roleThemes, spacing } from "../theme";
 import { toastError, toastSuccess } from "../utils/toasts";
 
 type Nav = StackNavigationProp<RootStackParamList, "InstructorLogin">;
@@ -79,16 +80,16 @@ export default function InstructorLoginScreen({ navigation }: { navigation: Nav 
 
 const styles = StyleSheet.create({
   notice: {
-    backgroundColor: "#ecfdf5",
-    borderRadius: 12,
+    backgroundColor: roleThemes.instructor.accentSoft,
+    borderRadius: radius.md,
     padding: 14,
-    marginBottom: 18,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: "#a7f3d0",
+    borderColor: colors.instructor,
   },
-  noticeTitle: { fontSize: 14, fontWeight: "700", color: "#065f46", marginBottom: 6 },
-  noticeText: { fontSize: 13, color: "#047857", lineHeight: 19 },
-  footer: { marginTop: 28, alignItems: "center", paddingHorizontal: 8 },
-  footerMuted: { fontSize: 14, fontWeight: "600", color: "#64748b", marginBottom: 8 },
-  footerBody: { fontSize: 13, color: "#94a3b8", textAlign: "center", lineHeight: 19 },
+  noticeTitle: { fontSize: 14, fontWeight: "700", color: roleThemes.instructor.drawerBg, marginBottom: 6 },
+  noticeText: { fontSize: 13, color: colors.instructor, lineHeight: 19 },
+  footer: { marginTop: 28, alignItems: "center", paddingHorizontal: spacing.sm },
+  footerMuted: { fontSize: 14, fontWeight: "600", color: colors.textSecondary, marginBottom: spacing.sm },
+  footerBody: { fontSize: 13, color: colors.textMuted, textAlign: "center", lineHeight: 19 },
 });

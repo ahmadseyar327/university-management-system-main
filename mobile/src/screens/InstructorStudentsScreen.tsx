@@ -5,11 +5,13 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { courseEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
+import { EmptyState, SimpleSelect, SlideOverDetail } from "../components";
 import LoadingView from "../components/LoadingView";
-import SimpleSelect, { SelectOption } from "../components/SimpleSelect";
-import SlideOverDetail from "../components/SlideOverDetail";
+import type { SelectOption } from "../components/SimpleSelect";
 import { useAuth } from "../contexts/AuthContext";
 import type { InstructorTabParamList } from "../navigation/types";
+import { colors, radius, shadow, spacing } from "../theme";
+import { listStyles } from "../theme/listStyles";
 import { mongoId } from "../utils/mongoId";
 import { toastError } from "../utils/toasts";
 
@@ -89,28 +91,36 @@ export default function InstructorStudentsScreen(_props: Props) {
   if (loading && rows.length === 0) return <LoadingView />;
 
   return (
-    <View style={styles.screen}>
+    <View style={listStyles.screen}>
       <View style={styles.filterBar}>
-        <SimpleSelect label="Course" options={courseOptions} value={courseId} onChange={setCourseId} />
+        <View style={[styles.filterCard, shadow.soft]}>
+          <SimpleSelect label="Course" options={courseOptions} value={courseId} onChange={setCourseId} />
+        </View>
       </View>
       <FlatList
         data={filtered}
         keyExtractor={(item, i) => mongoId(item) || `s-${i}`}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={listStyles.listFlush}
         ListEmptyComponent={
-          <Text style={styles.empty}>{courseId ? "No students in this course." : "Select a course to see students."}</Text>
+          <View style={listStyles.emptyWrap}>
+            <EmptyState
+              icon="people-outline"
+              title={courseId ? "No students in this course." : "Select a course"}
+              message={courseId ? undefined : "Choose a course above to see enrolled students."}
+            />
+          </View>
         }
-        ItemSeparatorComponent={() => <View style={styles.sep} />}
+        ItemSeparatorComponent={() => <View style={listStyles.sep} />}
         renderItem={({ item }) => (
           <Pressable
-            style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+            style={({ pressed }) => [listStyles.row, pressed && listStyles.rowPressed]}
             onPress={() => setDetail(item)}
-            android_ripple={{ color: "#e2e8f0" }}
+            android_ripple={{ color: colors.border }}
           >
-            <Text style={styles.rowName} numberOfLines={1}>
+            <Text style={listStyles.rowName} numberOfLines={1}>
               {studentName(item)}
             </Text>
-            <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+            <Ionicons name="chevron-forward" size={20} color={colors.instructor} />
           </Pressable>
         )}
       />
@@ -118,20 +128,20 @@ export default function InstructorStudentsScreen(_props: Props) {
       <SlideOverDetail open={detail !== null} onClosed={() => setDetail(null)}>
         {detail ? (
           <>
-            <Text style={styles.detailEyebrow}>Student</Text>
-            <Text style={styles.detailTitle}>{studentName(detail)}</Text>
-            <View style={styles.detailCard}>
-              <Text style={styles.k}>Roll number</Text>
-              <Text style={styles.v}>{String(detail.rollNumber ?? "—")}</Text>
-              <View style={styles.divider} />
-              <Text style={styles.k}>Email</Text>
-              <Text style={styles.v}>{String(detail.email ?? "—")}</Text>
-              <View style={styles.divider} />
-              <Text style={styles.k}>Course</Text>
-              <Text style={styles.v}>{String(detail.courseTitle ?? "—")}</Text>
-              <View style={styles.divider} />
-              <Text style={styles.k}>Enrolled</Text>
-              <Text style={styles.v}>{String(detail.createdAt ?? "—")}</Text>
+            <Text style={listStyles.detailEyebrow}>Student</Text>
+            <Text style={listStyles.detailTitle}>{studentName(detail)}</Text>
+            <View style={listStyles.detailCard}>
+              <Text style={listStyles.k}>Roll number</Text>
+              <Text style={listStyles.v}>{String(detail.rollNumber ?? "—")}</Text>
+              <View style={listStyles.divider} />
+              <Text style={listStyles.k}>Email</Text>
+              <Text style={listStyles.v}>{String(detail.email ?? "—")}</Text>
+              <View style={listStyles.divider} />
+              <Text style={listStyles.k}>Course</Text>
+              <Text style={listStyles.v}>{String(detail.courseTitle ?? "—")}</Text>
+              <View style={listStyles.divider} />
+              <Text style={listStyles.k}>Enrolled</Text>
+              <Text style={listStyles.v}>{String(detail.createdAt ?? "—")}</Text>
             </View>
           </>
         ) : null}
@@ -141,49 +151,16 @@ export default function InstructorStudentsScreen(_props: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#f1f5f9" },
   filterBar: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 4,
-    backgroundColor: "#f1f5f9",
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
   },
-  list: { paddingTop: 8, paddingBottom: 40 },
-  empty: { textAlign: "center", color: "#64748b", marginTop: 32, fontSize: 15, paddingHorizontal: 24 },
-  sep: { height: 1, backgroundColor: "#e2e8f0", marginLeft: 20 },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    backgroundColor: "#fff",
-  },
-  rowPressed: { backgroundColor: "#f8fafc" },
-  rowName: { flex: 1, fontSize: 17, fontWeight: "600", color: "#0f172a", marginRight: 8 },
-  detailEyebrow: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#94a3b8",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    marginBottom: 8,
-  },
-  detailTitle: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: "#0f172a",
-    letterSpacing: -0.5,
-    marginBottom: 20,
-  },
-  detailCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 18,
+  filterCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.md,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.border,
   },
-  k: { fontSize: 12, fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", marginBottom: 4 },
-  v: { fontSize: 16, fontWeight: "600", color: "#0f172a", marginBottom: 14 },
-  divider: { height: 1, backgroundColor: "#f1f5f9", marginVertical: 4 },
 });

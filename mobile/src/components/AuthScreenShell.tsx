@@ -1,13 +1,13 @@
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { colors, radius, shadow, spacing, typography } from "../theme";
 import AmbientBackground from "./AmbientBackground";
+import FadeInView from "./FadeInView";
 
 type Props = {
   children: React.ReactNode;
-  /** Shown as a pill (e.g. signup: "Student account") */
   roleBadge?: string;
   badgeTone?: "student" | "admin" | "instructor";
-  /** Small caps line above title */
   eyebrow?: string;
   title: string;
   subtitle?: string;
@@ -15,9 +15,9 @@ type Props = {
 };
 
 const badgeStyles = {
-  student: { bg: "#e0e7ff", fg: "#3730a3" },
-  admin: { bg: "#ffedd5", fg: "#9a3412" },
-  instructor: { bg: "#d1fae5", fg: "#065f46" },
+  student: { bg: colors.primarySoft, fg: colors.primary },
+  admin: { bg: "#ffedd5", fg: colors.admin },
+  instructor: { bg: "#d1fae5", fg: colors.instructor },
 } as const;
 
 export default function AuthScreenShell({
@@ -30,6 +30,7 @@ export default function AuthScreenShell({
   footer,
 }: Props) {
   const tone = badgeStyles[badgeTone];
+
   return (
     <View style={styles.root}>
       <AmbientBackground variant="auth" />
@@ -37,74 +38,58 @@ export default function AuthScreenShell({
         style={styles.scroll}
         contentContainerStyle={styles.outer}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {roleBadge ? (
-          <View style={[styles.badge, { backgroundColor: tone.bg }]}>
-            <Text style={[styles.badgeText, { color: tone.fg }]}>{roleBadge}</Text>
-          </View>
-        ) : null}
-        {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
-        <Text style={styles.title}>{title}</Text>
-        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-        <View style={styles.card}>{children}</View>
-        {footer}
+        <FadeInView>
+          {roleBadge ? (
+            <View style={[styles.badge, { backgroundColor: tone.bg }]}>
+              <Text style={[styles.badgeText, { color: tone.fg }]}>{roleBadge}</Text>
+            </View>
+          ) : null}
+          {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
+          <Text style={styles.title}>{title}</Text>
+          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        </FadeInView>
+        <FadeInView delay={120} style={styles.card}>
+          {children}
+        </FadeInView>
+        {footer ? <FadeInView delay={200}>{footer}</FadeInView> : null}
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#f1f5f9" },
-  scroll: { flex: 1, backgroundColor: "#f1f5f9" },
+  root: { flex: 1, backgroundColor: colors.background },
+  scroll: { flex: 1 },
   outer: {
     flexGrow: 1,
-    paddingHorizontal: 22,
-    paddingTop: 8,
-    paddingBottom: 36,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: 40,
   },
   badge: {
     alignSelf: "flex-start",
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 999,
-    marginBottom: 16,
+    borderRadius: radius.full,
+    marginBottom: spacing.md,
   },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.3,
-  },
+  badgeText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.3 },
   eyebrow: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#64748b",
-    letterSpacing: 1,
+    ...typography.caption,
+    color: colors.textMuted,
     textTransform: "uppercase",
     marginBottom: 8,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#0f172a",
-    letterSpacing: -0.5,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: "#64748b",
-    lineHeight: 22,
-    marginBottom: 22,
-  },
+  title: { ...typography.hero, fontSize: 30, color: colors.text, marginBottom: 8 },
+  subtitle: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.lg },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
+    borderColor: colors.border,
+    ...shadow.card,
   },
 });

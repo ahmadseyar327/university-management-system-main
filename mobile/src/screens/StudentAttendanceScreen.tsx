@@ -1,12 +1,14 @@
 import type { DrawerScreenProps } from "@react-navigation/drawer";
 import React, { useCallback, useEffect, useState } from "react";
-import { FlatList, ScrollView, StyleSheet, Text, View } from "react-native";
+import { FlatList, StyleSheet, Text, View } from "react-native";
 import { studentEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
-import SimpleSelect, { SelectOption } from "../components/SimpleSelect";
+import { EmptyState, ScreenContainer, ScreenHeader, SimpleSelect } from "../components";
+import type { SelectOption } from "../components/SimpleSelect";
 import LoadingView from "../components/LoadingView";
 import { useAuth } from "../contexts/AuthContext";
 import type { StudentTabParamList } from "../navigation/types";
+import { colors, radius, shadow, spacing } from "../theme";
 import { mongoId } from "../utils/mongoId";
 import { toastError } from "../utils/toasts";
 
@@ -18,12 +20,12 @@ type Props = DrawerScreenProps<StudentTabParamList, "StudentAttendance">;
 function statusStyles(raw: string) {
   const s = String(raw).trim().toUpperCase();
   if (s.startsWith("P"))
-    return { bg: "#d1fae5", fg: "#047857", border: "#6ee7b7" };
+    return { bg: colors.successSoft, fg: colors.success, border: colors.success };
   if (s.startsWith("A"))
-    return { bg: "#fee2e2", fg: "#b91c1c", border: "#fecaca" };
+    return { bg: colors.dangerSoft, fg: colors.danger, border: colors.danger };
   if (s.startsWith("L"))
-    return { bg: "#ffedd5", fg: "#c2410c", border: "#fdba74" };
-  return { bg: "#e2e8f0", fg: "#475569", border: "#cbd5e1" };
+    return { bg: colors.warningSoft, fg: colors.warning, border: colors.warning };
+  return { bg: colors.borderLight, fg: colors.textSecondary, border: colors.border };
 }
 
 export default function StudentAttendanceScreen(_props: Props) {
@@ -91,13 +93,13 @@ export default function StudentAttendanceScreen(_props: Props) {
   if (loadingMeta) return <LoadingView />;
 
   return (
-    <ScrollView style={styles.wrap} contentContainerStyle={styles.inner}>
-      <View style={styles.hero}>
-        <Text style={styles.heroTitle}>Attendance</Text>
-        <Text style={styles.heroSub}>Pick a course to see each session and your status.</Text>
-      </View>
+    <ScreenContainer>
+      <ScreenHeader
+        title="Attendance"
+        subtitle="Pick a course to see each session and your status."
+      />
 
-      <View style={styles.panel}>
+      <View style={[styles.panel, shadow.soft]}>
         <SimpleSelect label="Course | Instructor" options={opts} value={courseId} onChange={setCourseId} />
       </View>
 
@@ -110,16 +112,24 @@ export default function StudentAttendanceScreen(_props: Props) {
           keyExtractor={(_, i) => String(i)}
           ListEmptyComponent={
             courseId ? (
-              <Text style={styles.empty}>No attendance records yet for this course.</Text>
+              <EmptyState
+                icon="calendar-outline"
+                title="No attendance records yet"
+                message="No sessions recorded for this course."
+              />
             ) : (
-              <Text style={styles.empty}>Select a course to load your attendance.</Text>
+              <EmptyState
+                icon="list-outline"
+                title="Select a course"
+                message="Choose a course above to load your attendance."
+              />
             )
           }
           renderItem={({ item }) => {
             const stat = String(item.attendance ?? "");
             const palette = statusStyles(stat);
             return (
-              <View style={styles.card}>
+              <View style={[styles.card, shadow.soft]}>
                 <View style={styles.cardRow}>
                   <View style={styles.dateCol}>
                     <Text style={styles.dateLabel}>Session date</Text>
@@ -134,49 +144,44 @@ export default function StudentAttendanceScreen(_props: Props) {
           }}
         />
       )}
-    </ScrollView>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: "#f1f5f9" },
-  inner: { padding: 16, paddingBottom: 40 },
-  hero: { marginBottom: 12 },
-  heroTitle: { fontSize: 22, fontWeight: "800", color: "#0f172a" },
-  heroSub: { marginTop: 6, fontSize: 14, color: "#64748b", lineHeight: 20 },
   panel: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.border,
   },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
     padding: 14,
-    marginBottom: 10,
+    marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    borderColor: colors.border,
   },
   cardRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   dateCol: { flex: 1, paddingRight: 12 },
-  dateLabel: { fontSize: 12, fontWeight: "600", color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.6 },
-  dateValue: { marginTop: 4, fontSize: 16, fontWeight: "700", color: "#0f172a" },
+  dateLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+  },
+  dateValue: { marginTop: 4, fontSize: 16, fontWeight: "700", color: colors.text },
   badge: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 999,
+    borderRadius: radius.full,
     borderWidth: 1.5,
     minWidth: 52,
     alignItems: "center",
   },
   badgeTxt: { fontWeight: "800", fontSize: 14 },
-  empty: { textAlign: "center", color: "#64748b", marginTop: 24, lineHeight: 20 },
 });

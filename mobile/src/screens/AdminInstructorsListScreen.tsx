@@ -5,9 +5,11 @@ import React, { useCallback, useRef, useState } from "react";
 import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { instructorEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
+import { EmptyState, SlideOverDetail } from "../components";
 import LoadingView from "../components/LoadingView";
-import SlideOverDetail from "../components/SlideOverDetail";
 import type { AdminTabParamList } from "../navigation/types";
+import { colors, radius } from "../theme";
+import { listStyles } from "../theme/listStyles";
 import { mongoId } from "../utils/mongoId";
 import { toastError, toastSuccess } from "../utils/toasts";
 
@@ -88,24 +90,30 @@ export default function AdminInstructorsListScreen(_props: Props) {
   if (loading && rows.length === 0) return <LoadingView />;
 
   return (
-    <View style={styles.screen}>
+    <View style={listStyles.screen}>
       <FlatList
         data={rows}
         keyExtractor={(item) => mongoId(item)}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={<Text style={styles.empty}>No instructors yet.</Text>}
-        ItemSeparatorComponent={() => <View style={styles.sep} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
+        }
+        contentContainerStyle={listStyles.listFlush}
+        ListEmptyComponent={
+          <View style={listStyles.emptyWrap}>
+            <EmptyState icon="people-outline" title="No instructors yet." />
+          </View>
+        }
+        ItemSeparatorComponent={() => <View style={listStyles.sep} />}
         renderItem={({ item }) => (
           <Pressable
-            style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+            style={({ pressed }) => [listStyles.row, pressed && listStyles.rowPressed]}
             onPress={() => setDetail(item)}
-            android_ripple={{ color: "#e2e8f0" }}
+            android_ripple={{ color: colors.border }}
           >
-            <Text style={styles.rowName} numberOfLines={1}>
+            <Text style={listStyles.rowName} numberOfLines={1}>
               {displayName(item)}
             </Text>
-            <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+            <Ionicons name="chevron-forward" size={20} color={colors.primary} />
           </Pressable>
         )}
       />
@@ -113,14 +121,14 @@ export default function AdminInstructorsListScreen(_props: Props) {
       <SlideOverDetail open={detail !== null} onClosed={() => setDetail(null)}>
         {detail ? (
           <>
-            <Text style={styles.detailEyebrow}>Instructor</Text>
-            <Text style={styles.detailTitle}>{displayName(detail)}</Text>
-            <View style={styles.detailCard}>
-              <Text style={styles.k}>Email</Text>
-              <Text style={styles.v}>{String(detail.email ?? "—")}</Text>
-              <View style={styles.divider} />
-              <Text style={styles.k}>Added</Text>
-              <Text style={styles.v}>{String(detail.createdAt ?? "—")}</Text>
+            <Text style={listStyles.detailEyebrow}>Instructor</Text>
+            <Text style={listStyles.detailTitle}>{displayName(detail)}</Text>
+            <View style={listStyles.detailCard}>
+              <Text style={listStyles.k}>Email</Text>
+              <Text style={listStyles.v}>{String(detail.email ?? "—")}</Text>
+              <View style={listStyles.divider} />
+              <Text style={listStyles.k}>Added</Text>
+              <Text style={listStyles.v}>{String(detail.createdAt ?? "—")}</Text>
             </View>
             <Pressable style={styles.dangerBtn} onPress={() => confirmDelete(detail)}>
               <Text style={styles.dangerTxt}>Delete instructor</Text>
@@ -133,53 +141,13 @@ export default function AdminInstructorsListScreen(_props: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#f1f5f9" },
-  list: { paddingVertical: 8, paddingBottom: 40 },
-  empty: { textAlign: "center", color: "#64748b", marginTop: 48, fontSize: 15 },
-  sep: { height: 1, backgroundColor: "#e2e8f0", marginLeft: 20 },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    backgroundColor: "#fff",
-  },
-  rowPressed: { backgroundColor: "#f8fafc" },
-  rowName: { flex: 1, fontSize: 17, fontWeight: "600", color: "#0f172a", marginRight: 8 },
-  detailEyebrow: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#94a3b8",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    marginBottom: 8,
-  },
-  detailTitle: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: "#0f172a",
-    letterSpacing: -0.5,
-    marginBottom: 20,
-  },
-  detailCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    marginBottom: 20,
-  },
-  k: { fontSize: 12, fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", marginBottom: 4 },
-  v: { fontSize: 16, fontWeight: "600", color: "#0f172a", marginBottom: 14 },
-  divider: { height: 1, backgroundColor: "#f1f5f9", marginVertical: 4 },
   dangerBtn: {
-    backgroundColor: "#fef2f2",
-    borderRadius: 14,
+    backgroundColor: colors.dangerSoft,
+    borderRadius: radius.md,
     paddingVertical: 14,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#fecaca",
+    borderColor: colors.danger,
   },
-  dangerTxt: { color: "#b91c1c", fontWeight: "700", fontSize: 16 },
+  dangerTxt: { color: colors.danger, fontWeight: "700", fontSize: 16 },
 });

@@ -1,19 +1,14 @@
 import type { DrawerScreenProps } from "@react-navigation/drawer";
 import React, { useCallback, useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { studentEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
-import SimpleSelect, { SelectOption } from "../components/SimpleSelect";
+import { ActivityCard, EmptyState, ScreenContainer, ScreenHeader, SimpleSelect } from "../components";
+import type { SelectOption } from "../components/SimpleSelect";
 import LoadingView from "../components/LoadingView";
 import { useAuth } from "../contexts/AuthContext";
 import type { StudentTabParamList } from "../navigation/types";
+import { colors, radius, shadow, spacing } from "../theme";
 import { examTypes } from "../utils/constants";
 import { mongoId } from "../utils/mongoId";
 import { toastError } from "../utils/toasts";
@@ -95,61 +90,73 @@ export default function StudentMarksScreen(_props: Props) {
   if (loadingMeta) return <LoadingView />;
 
   return (
-    <ScrollView style={styles.wrap} contentContainerStyle={styles.inner}>
-      <SimpleSelect label="Course | Instructor" options={opts} value={courseId} onChange={setCourseId} />
+    <ScreenContainer>
+      <ScreenHeader
+        title="Marks"
+        subtitle="View your marks and grades by course and exam type."
+      />
+
+      <View style={[styles.panel, shadow.soft]}>
+        <SimpleSelect label="Course | Instructor" options={opts} value={courseId} onChange={setCourseId} />
+      </View>
+
       <Text style={styles.section}>Exam components</Text>
-      {examTypeList.map((exam) => {
-        const expanded = openExam === exam;
-        const rows = marksByExam[exam];
-        return (
-          <View key={exam} style={styles.acc}>
-            <Pressable
-              style={styles.accHead}
-              onPress={() => {
+
+      {examTypeList.length === 0 ? (
+        <EmptyState icon="document-text-outline" title="No exam types available." />
+      ) : (
+        examTypeList.map((exam) => {
+          const expanded = openExam === exam;
+          const rows = marksByExam[exam];
+          return (
+            <ActivityCard
+              key={exam}
+              variant="instructor"
+              header={exam}
+              isExpanded={expanded}
+              onToggle={() => {
                 setOpenExam(expanded ? null : exam);
                 if (!expanded && rows === undefined) void loadExam(exam);
               }}
             >
-              <Text style={styles.accTitle}>{exam}</Text>
-              <Text style={styles.accChev}>{expanded ? "▾" : "▸"}</Text>
-            </Pressable>
-            {expanded && (
-              <View style={styles.accBody}>
-                {loadingExam === exam ? (
-                  <ActivityIndicator color="#1a365d" />
-                ) : (
-                  (rows ?? []).map((row, idx) => (
-                    <View key={idx} style={styles.markRow}>
-                      <Text style={styles.markCell}>#{String(row.activityNumber ?? "")}</Text>
-                      <Text style={styles.markCell}>W:{String(row.weightage ?? "")}</Text>
-                      <Text style={styles.markCell}>Tot:{String(row.totalMarks ?? "")}</Text>
-                      <Text style={styles.markCell}>Got:{String(row.marks ?? "")}</Text>
-                    </View>
-                  ))
-                )}
-              </View>
-            )}
-          </View>
-        );
-      })}
-    </ScrollView>
+              {loadingExam === exam ? (
+                <ActivityIndicator color={colors.instructor} />
+              ) : (rows ?? []).length === 0 ? (
+                <Text style={styles.emptyRow}>No marks recorded yet.</Text>
+              ) : (
+                (rows ?? []).map((row, idx) => (
+                  <View key={idx} style={styles.markRow}>
+                    <Text style={styles.markCell}>#{String(row.activityNumber ?? "")}</Text>
+                    <Text style={styles.markCell}>W:{String(row.weightage ?? "")}</Text>
+                    <Text style={styles.markCell}>Tot:{String(row.totalMarks ?? "")}</Text>
+                    <Text style={styles.markCell}>Got:{String(row.marks ?? "")}</Text>
+                  </View>
+                ))
+              )}
+            </ActivityCard>
+          );
+        })
+      )}
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: "#fff" },
-  inner: { padding: 16, paddingBottom: 40 },
-  section: { marginTop: 8, marginBottom: 8, fontWeight: "700", color: "#2d3748" },
-  acc: { borderWidth: 1, borderColor: "#e2e8f0", borderRadius: 10, marginBottom: 10, overflow: "hidden" },
-  accHead: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 14,
-    backgroundColor: "#edf2f7",
+  panel: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  accTitle: { fontWeight: "600", color: "#1a202c" },
-  accChev: { color: "#718096" },
-  accBody: { padding: 12 },
-  markRow: { flexDirection: "row", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#f7fafc" },
-  markCell: { flex: 1, fontSize: 13, color: "#4a5568" },
+  section: { marginBottom: spacing.sm, fontWeight: "700", color: colors.text, fontSize: 15 },
+  markRow: {
+    flexDirection: "row",
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  markCell: { flex: 1, fontSize: 13, color: colors.textSecondary },
+  emptyRow: { textAlign: "center", color: colors.textSecondary, paddingVertical: spacing.sm },
 });

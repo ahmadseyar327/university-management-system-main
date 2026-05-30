@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../spinners/LoadingSpinner';
 
@@ -17,7 +17,20 @@ export default function PortalShell({
 }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (sidebarOpen) {
+      document.body.classList.add('portal-sidebar-open');
+    } else {
+      document.body.classList.remove('portal-sidebar-open');
+    }
+    return () => document.body.classList.remove('portal-sidebar-open');
+  }, [sidebarOpen]);
 
   function handleLogout() {
     onLogout();
@@ -89,7 +102,10 @@ export default function PortalShell({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <div className="inst-topbar-title">University Management System</div>
+          <div className="inst-topbar-title">
+            <span className="inst-topbar-title-full">University Management System</span>
+            <span className="inst-topbar-title-short">UMS</span>
+          </div>
         </header>
 
         <main className="inst-content flex-1 overflow-auto">

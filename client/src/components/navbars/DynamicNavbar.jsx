@@ -23,7 +23,7 @@ export default function DynamicNavbar({ options, functionalItem }) {
             <span className='navbar-toggler-icon' />
           </button>
         ) : null}
-        <div className='navbar-collapse' id='navbarSupportedContent'>
+        <div className='navbar-collapse collapse' id='navbarSupportedContent'>
           <ul className='navbar-nav me-auto mb-2 mb-lg-0 mx-auto'>
             {options?.map((option, index) => {
               return option.children ? (

@@ -20,7 +20,7 @@ export default function AttendanceTable({
 
   const tableClass =
     variant === 'instructor'
-      ? 'inst-table'
+      ? 'inst-table inst-table-responsive'
       : 'table table-sm ' + (styles || '');
 
   const theadClass =
@@ -49,6 +49,7 @@ export default function AttendanceTable({
                     }
                     className={`${attribute === 'name' && !item?.isPublic ? 'text-decoration-line-through' : ''} ${attribute === 'name' ? 'cursor-pointer' : ''}`}
                     key={attrIndex}
+                    data-label={headers[attrIndex]}
                     title={
                       attribute === 'name'
                         ? 'Click to toggle visibility'

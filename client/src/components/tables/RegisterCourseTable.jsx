@@ -12,7 +12,7 @@ export default function RegisterCourseTable({
 }) {
   const tableClass =
     variant === 'instructor'
-      ? 'inst-table'
+      ? 'inst-table inst-table-responsive'
       : 'table table-sm ' + (styles || '');
 
   const theadClass =
@@ -33,7 +33,7 @@ export default function RegisterCourseTable({
             data.map((item, index) => (
               <tr key={index}>
                 {dataAttributes.map((attribute, attrIndex) => (
-                  <td key={attrIndex}>
+                  <td key={attrIndex} data-label={headers[attrIndex]}>
                     {attribute !== 'action' ? (
                       attribute === 'createdAt' ? (
                         moment(item[attribute]).format('LL')

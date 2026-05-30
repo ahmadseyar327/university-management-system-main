@@ -1,0 +1,72 @@
+import { StyleSheet } from "react-native";
+import { colors, radius, shadow, spacing } from "./index";
+
+export const listStyles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.background },
+  list: { padding: spacing.md, paddingBottom: 40, gap: spacing.sm },
+  listFlush: { paddingVertical: spacing.sm, paddingBottom: 40 },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: "hidden",
+    ...shadow.soft,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 16,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.surface,
+  },
+  rowPressed: { backgroundColor: colors.primarySoft },
+  rowInCard: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  rowName: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.text,
+    marginRight: 8,
+  },
+  rowMeta: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+  sep: { height: spacing.sm },
+  emptyWrap: { paddingTop: 60, paddingHorizontal: spacing.lg },
+  detailEyebrow: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.textMuted,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    marginBottom: 8,
+  },
+  detailTitle: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: colors.text,
+    letterSpacing: -0.5,
+    marginBottom: 20,
+  },
+  detailCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadow.soft,
+  },
+  k: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.textMuted,
+    textTransform: "uppercase",
+    marginBottom: 4,
+    letterSpacing: 0.5,
+  },
+  v: { fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 14 },
+  divider: { height: 1, backgroundColor: colors.borderLight, marginVertical: 4 },
+});

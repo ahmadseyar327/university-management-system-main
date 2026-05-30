@@ -1,13 +1,14 @@
 import type { DrawerScreenProps } from "@react-navigation/drawer";
 import React, { useRef, useState } from "react";
-import { Keyboard, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Keyboard, Platform, StyleSheet, View } from "react-native";
 import { studentEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
-import { FormTextInput, PrimaryButton } from "../components";
+import { FormTextInput, PrimaryButton, ScreenContainer, ScreenHeader } from "../components";
 import { useAuth, type UserRecord } from "../contexts/AuthContext";
 import type { StudentTabParamList } from "../navigation/types";
 import { mongoId } from "../utils/mongoId";
 import { toastError, toastSuccess } from "../utils/toasts";
+import { colors, radius, shadow, spacing } from "../theme";
 
 type Props = DrawerScreenProps<StudentTabParamList, "StudentSettings">;
 
@@ -48,67 +49,41 @@ export default function StudentSettingsScreen(_props: Props) {
         return;
       }
       toastSuccess(res.message ?? "Updated");
-      const next = { ...(studentData ?? {}), ...body } as UserRecord;
-      setStudentData(next);
+      setStudentData({ ...(studentData ?? {}), ...body } as UserRecord);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>Edit profile</Text>
-      <View style={styles.row}>
-        <View style={styles.half}>
-          <FormTextInput
-            label="First name"
-            value={fname}
-            onChangeText={(t) => {
-              formRef.current.fname = t;
-              setFname(t);
-            }}
-            autoCapitalize="words"
-          />
+    <ScreenContainer>
+      <ScreenHeader title="Settings" subtitle="Update your profile and password." />
+      <View style={styles.card}>
+        <View style={styles.row}>
+          <View style={styles.half}>
+            <FormTextInput label="First name" value={fname} onChangeText={(t) => { formRef.current.fname = t; setFname(t); }} autoCapitalize="words" />
+          </View>
+          <View style={styles.half}>
+            <FormTextInput label="Last name" value={lname} onChangeText={(t) => { formRef.current.lname = t; setLname(t); }} autoCapitalize="words" />
+          </View>
         </View>
-        <View style={styles.half}>
-          <FormTextInput
-            label="Last name"
-            value={lname}
-            onChangeText={(t) => {
-              formRef.current.lname = t;
-              setLname(t);
-            }}
-            autoCapitalize="words"
-          />
-        </View>
+        <FormTextInput label="Email" value={email} onChangeText={(t) => { formRef.current.email = t; setEmail(t); }} autoCapitalize="none" keyboardType="email-address" />
+        <FormTextInput label="Password" value={password} onChangeText={(t) => { formRef.current.password = t; setPassword(t); }} secureTextEntry />
+        <PrimaryButton title="Save changes" loading={loading} onPress={() => void save()} />
       </View>
-      <FormTextInput
-        label="Email"
-        value={email}
-        onChangeText={(t) => {
-          formRef.current.email = t;
-          setEmail(t);
-        }}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
-      <FormTextInput
-        label="Password"
-        value={password}
-        onChangeText={(t) => {
-          formRef.current.password = t;
-          setPassword(t);
-        }}
-        secureTextEntry
-      />
-      <PrimaryButton title="Save changes" loading={loading} onPress={() => void save()} />
-    </ScrollView>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, paddingBottom: 40, backgroundColor: "#fff" },
-  title: { fontSize: 20, fontWeight: "700", marginBottom: 16, color: "#1a202c" },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadow.card,
+  },
   row: { flexDirection: "row", marginHorizontal: -6 },
   half: { flex: 1, paddingHorizontal: 6 },
 });

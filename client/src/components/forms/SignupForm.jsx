@@ -18,7 +18,7 @@ export default function SignupForm({
       showLoginLink !== undefined ? showLoginLink : !update;
     return (
       <form onSubmit={(event) => signup(event)} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="auth-field">
             <label className={labelClass}>First Name</label>
             <input

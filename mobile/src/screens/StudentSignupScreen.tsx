@@ -5,6 +5,7 @@ import { studentEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
 import { AuthScreenShell, FormTextInput, PrimaryButton } from "../components";
 import type { RootStackParamList } from "../navigation/types";
+import { colors, spacing } from "../theme";
 import { toastError, toastSuccess } from "../utils/toasts";
 
 type Nav = StackNavigationProp<RootStackParamList, "StudentSignup">;
@@ -149,6 +150,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", marginHorizontal: -6 },
   half: { flex: 1, paddingHorizontal: 6 },
   footer: { marginTop: 28, alignItems: "center" },
-  footerMuted: { fontSize: 14, color: "#64748b", marginBottom: 6 },
-  footerLink: { fontSize: 16, fontWeight: "700", color: "#1a365d" },
+  footerMuted: { fontSize: 14, color: colors.textSecondary, marginBottom: 6 },
+  footerLink: { fontSize: 16, fontWeight: "700", color: colors.primary },
 });
