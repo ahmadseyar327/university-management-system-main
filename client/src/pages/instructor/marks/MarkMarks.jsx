@@ -4,6 +4,7 @@ import { instructorEndpoints } from '../../../api/endpoints/instructorEndpoints'
 import { toastErrorObject, toastSuccessObject } from '../../../utility/toasts';
 import { toast } from 'react-toastify';
 import MarksTable from '../../../components/tables/MarksTable';
+import PrimaryButton from '../../../components/instructor/PrimaryButton';
 
 export default function MarkMarks({
   data,
@@ -16,12 +17,10 @@ export default function MarkMarks({
   weightage,
   totalMarks,
 }) {
-
   async function postMarks() {
     setIsLoading(true);
     try {
-      let res;
-      res = await fetchResponse(instructorEndpoints.postAcademics(), 1, {
+      const res = await fetchResponse(instructorEndpoints.postAcademics(), 1, {
         examType,
         totalMarks: parseFloat(totalMarks),
         activityNumber,
@@ -34,14 +33,12 @@ export default function MarkMarks({
         instructorId,
         courseId,
       });
-      const resData = res.data;
       if (!res.success) {
         toast.error(res.message, toastErrorObject);
         setIsLoading(false);
         return;
       }
       toast.success(res.message, toastSuccessObject);
-      console.log('Log data', resData);
       setIsLoading(false);
     } catch (error) {
       console.log(error);
@@ -51,14 +48,11 @@ export default function MarkMarks({
 
   return (
     <>
-      <button
-        onClick={postMarks}
-        className='btn btn-sm btn-secondary w-100 mb-3'
-      >
-        Post
-      </button>
+      <PrimaryButton onClick={postMarks} className="w-full mb-4">
+        Post Marks
+      </PrimaryButton>
       <MarksTable
-        styles={'table-bordered'}
+        variant="instructor"
         headers={['Roll Number', 'Name', 'Marks']}
         data={data}
         setData={setData}

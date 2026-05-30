@@ -4,24 +4,22 @@ import { fetchResponse } from '../../../api/service';
 import { instructorEndpoints } from '../../../api/endpoints/instructorEndpoints';
 import { toastErrorObject, toastSuccessObject } from '../../../utility/toasts';
 import { toast } from 'react-toastify';
+import PrimaryButton from '../../../components/instructor/PrimaryButton';
 
 export default function MarkAttendance({ data, date, courseId, instructorId }) {
   const [attendanceData, setAttendanceData] = useState(data);
 
   useEffect(() => {
-    setAttendanceData(
-      data?.filter((student) => student?.courseId === courseId)
-    );
+    setAttendanceData(data?.filter((student) => student?.courseId === courseId));
   }, [data, courseId]);
 
   async function postAttendance() {
     if (!courseId) {
-      alert('Please Select a Course.');
+      toast.error('Please select a course.', toastErrorObject);
       return;
     }
     try {
-      let res;
-      res = await fetchResponse(instructorEndpoints.postAttendance(), 1, {
+      const res = await fetchResponse(instructorEndpoints.postAttendance(), 1, {
         date,
         attendance: attendanceData?.map((attendance) => ({
           studentId: attendance._id,
@@ -31,29 +29,32 @@ export default function MarkAttendance({ data, date, courseId, instructorId }) {
         instructorId,
         courseId,
       });
-      const resData = res.data;
       if (!res.success) {
         toast.error(res.message, toastErrorObject);
         return;
       }
       toast.success(res.message, toastSuccessObject);
-      console.log('Log data', resData);
     } catch (error) {
       console.log(error);
     }
   }
 
+  if (!courseId) {
+    return (
+      <p className="inst-table-empty text-center py-8 text-gray-400">
+        Select a course to mark attendance.
+      </p>
+    );
+  }
+
   return (
     <>
-      <button
-        onClick={postAttendance}
-        className='btn btn-sm btn-secondary w-100 mb-3'
-      >
-        Post
-      </button>
+      <PrimaryButton onClick={postAttendance} className="w-full mb-4">
+        Post Attendance
+      </PrimaryButton>
       <AttendanceTable
-        styles={'table-bordered'}
-        headers={['Roll Number', 'Name', 'Attendance']}
+        variant="instructor"
+        headers={['Roll Number', 'Name', 'Status']}
         data={attendanceData}
         setData={setAttendanceData}
         dataAttributes={['rollNumber', 'name', 'status']}

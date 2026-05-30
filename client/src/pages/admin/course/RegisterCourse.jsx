@@ -1,24 +1,24 @@
-import React, { useState } from 'react'
-import AdminLayout from '../../../layouts/AdminLayout'
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AdminLayout from '../../../layouts/AdminLayout';
+import PageHeader from '../../../components/instructor/PageHeader';
+import ContentCard from '../../../components/instructor/ContentCard';
 import { fetchResponse } from '../../../api/service';
 import { courseEndpoints } from '../../../api/endpoints/courseEndpoints';
 import { toast } from 'react-toastify';
 import { toastErrorObject, toastSuccessObject } from '../../../utility/toasts';
-import GeneralCard from '../../../components/cards/GeneralCard';
 import CourseRegisterForm from '../../../components/forms/CourseRegisterForm';
 
 export default function RegisterCourse() {
-  const adminId = JSON.parse(localStorage.getItem("admin"))._id;
-
+  const adminId = JSON.parse(localStorage.getItem('admin'))._id;
   const navigate = useNavigate();
 
   const [signupDetails, setSignupDetails] = useState({
-    title: "",
-    code: "",
-    type: "",
-    fee: "",
-    creditHours: "",
+    title: '',
+    code: '',
+    type: '',
+    fee: '',
+    creditHours: '',
   });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -29,17 +29,15 @@ export default function RegisterCourse() {
       const res = await fetchResponse(
         courseEndpoints.registerCourse(),
         1,
-        {...signupDetails, adminId}
+        { ...signupDetails, adminId }
       );
-      const data = res.data;
       if (!res.success) {
         toast.error(res.message, toastErrorObject);
         setIsLoading(false);
         return;
       }
       toast.success(res.message, toastSuccessObject);
-      console.log("Log data", data);
-      navigate("/admin/courses/action");
+      navigate('/admin/courses/action');
     } catch (error) {
       console.log(error);
       setIsLoading(false);
@@ -48,18 +46,21 @@ export default function RegisterCourse() {
 
   return (
     <AdminLayout isLoading={isLoading}>
-      <div
-        className="d-flex align-items-center justify-content-center"
-        style={{ minHeight: "81vh" }}
-      >
-        <GeneralCard header={"Course Registration"}>
+      <PageHeader
+        title="Register Course"
+        subtitle="Add a new course to the university catalog."
+      />
+
+      <div className="max-w-lg mx-auto">
+        <ContentCard title="Course Details" subtitle="Fill in the course information">
           <CourseRegisterForm
+            variant="auth"
             registrationDetails={signupDetails}
             setRegistrationDetails={setSignupDetails}
             registration={handleRegisteration}
           />
-        </GeneralCard>
+        </ContentCard>
       </div>
     </AdminLayout>
-  )
+  );
 }

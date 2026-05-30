@@ -1,34 +1,91 @@
-import React from 'react'
-import { useAuth } from '../../contexts/authContext';
-import OneOnOneDynamicTable from '../../components/tables/OneOnOneDynamicTable';
+import React from 'react';
+import { Link } from 'react-router-dom';
+import moment from 'moment';
 import StudentLayout from '../../layouts/StudentLayout';
+import PageHeader from '../../components/instructor/PageHeader';
+import ContentCard from '../../components/instructor/ContentCard';
+import { useAuth } from '../../contexts/authContext';
 
 export default function Student() {
   const { studentData } = useAuth();
 
+  const quickLinks = [
+    { label: 'My Courses', path: '/student/courses' },
+    { label: 'Register Course', path: '/student/register/course' },
+    { label: 'View Attendance', path: '/student/attendance' },
+    { label: 'View Marks', path: '/student/marks' },
+  ];
+
   return (
     <StudentLayout>
-      <OneOnOneDynamicTable
-        data={[
-          {
-            title: "Name",
-            value: studentData.fname,
-          },
-          {
-            title: "Roll Number",
-            value: studentData.rollNumber,
-          },
-          {
-            title: "Email Address",
-            value: studentData.email,
-          },
-          {
-            title: "Joining Date",
-            value: studentData.createdAt,
-          },
-        ]}
-        styles={"bg-secondary text-white"}
+      <PageHeader
+        title={`Welcome, ${studentData?.fname}`}
+        subtitle="Access your courses, attendance, and academic records."
       />
+
+      <div className="inst-stat-grid">
+        <div className="inst-stat-card">
+          <div className="inst-stat-icon">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+          <div>
+            <p className="inst-stat-label">Student</p>
+            <p className="inst-stat-value">
+              {studentData?.fname} {studentData?.lname}
+            </p>
+          </div>
+        </div>
+        <div className="inst-stat-card">
+          <div className="inst-stat-icon">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+            </svg>
+          </div>
+          <div>
+            <p className="inst-stat-label">Roll Number</p>
+            <p className="inst-stat-value">{studentData?.rollNumber}</p>
+          </div>
+        </div>
+        <div className="inst-stat-card">
+          <div className="inst-stat-icon">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <p className="inst-stat-label">Email</p>
+            <p className="inst-stat-value">{studentData?.email}</p>
+          </div>
+        </div>
+        <div className="inst-stat-card">
+          <div className="inst-stat-icon">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <p className="inst-stat-label">Member Since</p>
+            <p className="inst-stat-value">
+              {moment(studentData?.createdAt).format('MMMM D, YYYY')}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <ContentCard title="Quick Actions" subtitle="Jump to common tasks">
+        <div className="inst-quick-links">
+          {quickLinks.map((link) => (
+            <Link key={link.path} to={link.path} className="inst-quick-link">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      </ContentCard>
     </StudentLayout>
   );
 }

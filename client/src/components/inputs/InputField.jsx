@@ -1,6 +1,37 @@
-import React from 'react'
+import React from 'react';
 
-export default function InputField({ label, type, value, onChange, required, min, max }) {
+const instLabel = 'inst-label';
+const instInput = 'inst-input';
+
+export default function InputField({
+  label,
+  type,
+  value,
+  onChange,
+  required,
+  min,
+  max,
+  variant,
+  placeholder,
+}) {
+  if (variant === 'instructor') {
+    return (
+      <div>
+        {label ? <label className={instLabel}>{label}</label> : null}
+        <input
+          className={instInput}
+          type={type}
+          value={value}
+          onChange={onChange}
+          required={required}
+          min={min}
+          max={max}
+          placeholder={placeholder}
+        />
+      </div>
+    );
+  }
+
   return (
     <>
       {label ? <label className="form-label">{label}</label> : null}
@@ -12,7 +43,8 @@ export default function InputField({ label, type, value, onChange, required, min
         required={required}
         min={min}
         max={max}
+        placeholder={placeholder}
       />
     </>
-  )
+  );
 }

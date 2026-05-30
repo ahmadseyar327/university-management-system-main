@@ -1,22 +1,23 @@
 import React from 'react';
 import { useAuth } from '../contexts/authContext';
-import Layout from './Layout';
-import {
-  instructorNavbarContent,
-} from '../utility/navbar';
+import PortalShell from '../components/portal/PortalShell';
+import { instructorNavItems } from '../utility/portalNav';
 
 export default function InstructorLayout({ isLoading, children }) {
-  const { setInstructorData } = useAuth();
-  const { options, functionalItem } =
-    instructorNavbarContent(setInstructorData);
+  const { instructorData, setInstructorData } = useAuth();
 
   return (
-    <Layout
+    <PortalShell
       isLoading={isLoading}
-      navbarOptions={options}
-      navbarFunctionalItem={functionalItem}
+      roleLabel="Instructor Portal"
+      navItems={instructorNavItems}
+      user={instructorData}
+      onLogout={() => {
+        setInstructorData(null);
+        localStorage.removeItem('instructor');
+      }}
     >
-      <div className='mt-4'>{children}</div>
-    </Layout>
+      <div className="inst-page">{children}</div>
+    </PortalShell>
   );
 }

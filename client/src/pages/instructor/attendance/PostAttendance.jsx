@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import InstructorLayout from '../../../layouts/InstructorLayout';
+import PageHeader from '../../../components/instructor/PageHeader';
+import ContentCard from '../../../components/instructor/ContentCard';
 import { instructorEndpoints } from '../../../api/endpoints/instructorEndpoints';
 import { courseEndpoints } from '../../../api/endpoints/courseEndpoints';
 import { fetchResponse } from '../../../api/service';
@@ -28,45 +30,42 @@ export default function PostAttendance() {
     async function fetchData() {
       setIsLoading(true);
       try {
-        let res;
-        res = await fetchResponse(
-          instructorEndpoints.getAttendances(instructorId, temporarySelection.course, temporarySelection.date),
+        const res = await fetchResponse(
+          instructorEndpoints.getAttendances(
+            instructorId,
+            temporarySelection.course,
+            temporarySelection.date
+          ),
           0,
           null
         );
-        const resData = res.data;
         if (!res.success) {
           toast.error(res.message, toastErrorObject);
           return;
         }
-        console.log('Log data', resData);
-        setAttendances(resData);
+        setAttendances(res.data);
       } catch (error) {
         console.log(error);
       } finally {
         setIsLoading(false);
       }
     }
-    if (temporarySelection.date && temporarySelection.course ) fetchData();
+    if (temporarySelection.date && temporarySelection.course) fetchData();
+
     async function fetchStudents() {
       try {
-        let res;
-        res = await fetchResponse(
+        const res = await fetchResponse(
           courseEndpoints.getStudentsOfInstructor(instructorId),
           0,
           null
         );
-        const resData = res.data;
         if (!res.success) {
           toast.error(res.message, toastErrorObject);
           return;
         }
-        console.log('Log data', resData);
-        const sortedStudents = resData?.sort((a, b) => {
+        const sortedStudents = res.data?.sort((a, b) => {
           const fnameComparison = a.fname.localeCompare(b.fname);
-          if (fnameComparison !== 0) {
-            return fnameComparison;
-          }
+          if (fnameComparison !== 0) return fnameComparison;
           return a.lname.localeCompare(b.lname);
         });
         setStudentsAttendance(
@@ -89,7 +88,7 @@ export default function PostAttendance() {
 
   useEffect(() => {
     if (temporarySelection.date && temporarySelection.course) {
-      let duplicateObject = attendances.find(
+      const duplicateObject = attendances.find(
         (attendance) =>
           moment(attendance?.date).format('YYYY-MM-DD') ===
             temporarySelection.date &&
@@ -101,14 +100,35 @@ export default function PostAttendance() {
     }
   }, [attendances, temporarySelection]);
 
+  const courseOptions = studentsAttendance
+    .filter((attendance) => {
+      const courseId = attendance.courseId;
+      if (!uniqueCourseIds[courseId]) {
+        uniqueCourseIds[courseId] = true;
+        return true;
+      }
+      return false;
+    })
+    .sort((a, b) => a.courseTitle.localeCompare(b.courseTitle))
+    .map((attendance) => ({
+      value: attendance.courseId,
+      title: attendance.courseTitle,
+    }));
+
   return (
     <InstructorLayout isLoading={isLoading}>
-      <div className='row mb-4'>
-        <div className='col'>
+      <PageHeader
+        title="Attendance"
+        subtitle="Record or update daily student attendance."
+      />
+
+      <ContentCard title="Session Details" subtitle="Pick a date and course">
+        <div className="inst-filter-row">
           <InputField
-            label={'Select Date'}
-            type={'date'}
-            value={temporarySelection?.date}
+            variant="instructor"
+            label="Date"
+            type="date"
+            value={temporarySelection.date}
             onChange={(event) =>
               setTemporarySelection({
                 ...temporarySelection,
@@ -116,25 +136,11 @@ export default function PostAttendance() {
               })
             }
           />
-        </div>
-        <div className='col'>
           <SelectField
-            label={'Select Course'}
-            options={studentsAttendance
-              .filter((attendance) => {
-                const courseId = attendance.courseId;
-                if (!uniqueCourseIds[courseId]) {
-                  uniqueCourseIds[courseId] = true;
-                  return true;
-                }
-                return false;
-              })
-              .sort((a, b) => a.courseTitle.localeCompare(b.courseTitle))
-              .map((attendance) => ({
-                value: attendance.courseId,
-                title: attendance.courseTitle,
-              }))}
-            value={temporarySelection?.course}
+            variant="instructor"
+            label="Course"
+            options={courseOptions}
+            value={temporarySelection.course}
             onChange={(event) =>
               setTemporarySelection({
                 ...temporarySelection,
@@ -143,24 +149,36 @@ export default function PostAttendance() {
             }
           />
         </div>
-      </div>
-      {selectedAttendance ? (
-        <UpdateAttendance
-          data={selectedAttendance?.attendance?.map((attendance) => ({
-            ...attendance,
-            name: attendance.fname + ' ' + attendance.lname,
-            isPublic: attendance.isPublic === undefined ? true : attendance.isPublic,
-          }))}
-          attendanceWhole={selectedAttendance}
-        />
-      ) : (
-        <MarkAttendance
-          data={studentsAttendance}
-          date={temporarySelection.date}
-          courseId={temporarySelection.course}
-          instructorId={instructorId}
-        />
-      )}
+      </ContentCard>
+
+      <ContentCard
+        title={selectedAttendance ? 'Update Attendance' : 'Mark Attendance'}
+        subtitle={
+          selectedAttendance
+            ? 'Editing an existing record for this date'
+            : 'Creating a new attendance record'
+        }
+        className="mt-4"
+      >
+        {selectedAttendance ? (
+          <UpdateAttendance
+            data={selectedAttendance?.attendance?.map((attendance) => ({
+              ...attendance,
+              name: attendance.fname + ' ' + attendance.lname,
+              isPublic:
+                attendance.isPublic === undefined ? true : attendance.isPublic,
+            }))}
+            attendanceWhole={selectedAttendance}
+          />
+        ) : (
+          <MarkAttendance
+            data={studentsAttendance}
+            date={temporarySelection.date}
+            courseId={temporarySelection.course}
+            instructorId={instructorId}
+          />
+        )}
+      </ContentCard>
     </InstructorLayout>
   );
 }

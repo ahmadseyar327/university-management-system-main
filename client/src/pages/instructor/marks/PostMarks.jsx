@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import InstructorLayout from '../../../layouts/InstructorLayout';
+import PageHeader from '../../../components/instructor/PageHeader';
+import ContentCard from '../../../components/instructor/ContentCard';
 import { fetchResponse } from '../../../api/service';
 import { toast } from 'react-toastify';
 import { toastErrorObject } from '../../../utility/toasts';
@@ -26,24 +28,19 @@ export default function PostMarks() {
   useEffect(() => {
     async function fetchStudents() {
       try {
-        let res;
-        res = await fetchResponse(
+        const res = await fetchResponse(
           courseEndpoints.getStudentsOfInstructor(instructorId),
           0,
           null
         );
-        const resData = res.data;
         if (!res.success) {
           toast.error(res.message, toastErrorObject);
           setIsLoading(false);
           return;
         }
-        console.log('Log data', resData);
-        const sortedStudents = resData?.sort((a, b) => {
+        const sortedStudents = res.data?.sort((a, b) => {
           const fnameComparison = a.fname.localeCompare(b.fname);
-          if (fnameComparison !== 0) {
-            return fnameComparison;
-          }
+          if (fnameComparison !== 0) return fnameComparison;
           return a.lname.localeCompare(b.lname);
         });
         setStudentsMarks(
@@ -64,31 +61,36 @@ export default function PostMarks() {
     fetchStudents();
   }, [instructorId]);
 
+  const courseOptions = studentsMarks
+    .filter((marks) => {
+      const courseId = marks.courseId;
+      if (!uniqueCourseIds[courseId]) {
+        uniqueCourseIds[courseId] = true;
+        return true;
+      }
+      return false;
+    })
+    .sort((a, b) => a.courseTitle.localeCompare(b.courseTitle))
+    .map((marks) => ({
+      value: marks.courseId,
+      title: marks.courseTitle,
+    }));
+
   return (
     <InstructorLayout isLoading={isLoading}>
-      <div className='row'>
-        <div
-          className='col-md col-md-3 overflow-auto'
-          style={{ maxHeight: '83vh' }}
-        >
-          <div className='pt-2 p-3 mb-2 border rounded'>
+      <PageHeader
+        title="Post Marks"
+        subtitle="Enter and publish student marks for an activity."
+      />
+
+      <div className="inst-layout-split">
+        <ContentCard title="Exam Details" subtitle="Configure the assessment">
+          <div className="inst-filter-grid">
             <SelectField
-              label={'Select Course'}
-              options={studentsMarks
-                .filter((marks) => {
-                  const courseId = marks.courseId;
-                  if (!uniqueCourseIds[courseId]) {
-                    uniqueCourseIds[courseId] = true;
-                    return true;
-                  }
-                  return false;
-                })
-                .sort((a, b) => a.courseTitle.localeCompare(b.courseTitle))
-                .map((marks) => ({
-                  value: marks.courseId,
-                  title: marks.courseTitle,
-                }))}
-              value={temporarySelection?.course}
+              variant="instructor"
+              label="Course"
+              options={courseOptions}
+              value={temporarySelection.course}
               onChange={(event) =>
                 setTemporarySelection({
                   ...temporarySelection,
@@ -96,12 +98,11 @@ export default function PostMarks() {
                 })
               }
             />
-          </div>
-          <div className='pt-2 p-3 mb-2 border rounded'>
             <SelectField
-              label={'Select Exam Type'}
+              variant="instructor"
+              label="Exam Type"
               options={examTypes?.map((exam) => ({ value: exam, title: exam }))}
-              value={temporarySelection?.examType}
+              value={temporarySelection.examType}
               onChange={(event) =>
                 setTemporarySelection({
                   ...temporarySelection,
@@ -109,11 +110,10 @@ export default function PostMarks() {
                 })
               }
             />
-          </div>
-          <div className='pt-2 p-3 mb-2 border rounded'>
             <InputField
-              label={'Enter Activity Number'}
-              type={'number'}
+              variant="instructor"
+              label="Activity Number"
+              type="number"
               value={temporarySelection.activityNumber}
               onChange={(event) =>
                 setTemporarySelection({
@@ -124,11 +124,10 @@ export default function PostMarks() {
               required={true}
               min={1}
             />
-          </div>
-          <div className='pt-2 p-3 mb-2 border rounded'>
             <InputField
-              label={'Enter Total Marks'}
-              type={'number'}
+              variant="instructor"
+              label="Total Marks"
+              type="number"
               value={temporarySelection.totalMarks}
               onChange={(event) =>
                 setTemporarySelection({
@@ -139,11 +138,10 @@ export default function PostMarks() {
               required={true}
               min={1}
             />
-          </div>
-          <div className='pt-2 p-3 border rounded'>
             <InputField
-              label={'Enter Weightage'}
-              type={'number'}
+              variant="instructor"
+              label="Weightage"
+              type="number"
               value={temporarySelection.weightage}
               onChange={(event) =>
                 setTemporarySelection({
@@ -155,9 +153,9 @@ export default function PostMarks() {
               min={0}
             />
           </div>
-        </div>
-        <div className='col-md col-md-9 pt-4 pt-md-0 overflow-auto'
-          style={{ maxHeight: '83vh' }}>
+        </ContentCard>
+
+        <ContentCard title="Student Marks" subtitle="Enter marks for each student">
           <MarkMarks
             data={studentsMarks.filter(
               (student) => student.courseId === temporarySelection.course
@@ -171,7 +169,7 @@ export default function PostMarks() {
             weightage={temporarySelection.weightage}
             totalMarks={temporarySelection.totalMarks}
           />
-        </div>
+        </ContentCard>
       </div>
     </InstructorLayout>
   );

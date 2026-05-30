@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import HomeLayout from '../../layouts/HomeLayout';
-import GeneralCard from '../../components/cards/GeneralCard';
+import LoginLayout from '../../layouts/LoginLayout';
+import LoginCard from '../../components/cards/LoginCard';
 import SignupForm from '../../components/forms/SignupForm';
 import { studentEndpoints } from '../../api/endpoints/studentEndpoints';
 import { fetchResponse } from '../../api/service';
@@ -28,14 +28,12 @@ export default function StudentSignup() {
         1,
         signupDetails
       );
-      const data = res.data;
       if (!res.success) {
         toast.error(res.message, toastErrorObject);
         setIsLoading(false);
         return;
       }
       toast.success(res.message, toastSuccessObject);
-      console.log('Log data', data);
       navigate('/student/login');
     } catch (error) {
       console.log(error);
@@ -44,14 +42,20 @@ export default function StudentSignup() {
   }
 
   return (
-    <HomeLayout isLoading={isLoading}>
-      <GeneralCard header={'Student Signup'}>
+    <LoginLayout isLoading={isLoading}>
+      <LoginCard
+        title="Student Signup"
+        subtitle="Create your student account"
+        backTo="/student/login"
+        backLabel="Back to login"
+      >
         <SignupForm
+          variant="auth"
           signupDetails={signupDetails}
           setSignupDetails={setSignupDetails}
           signup={handleSignup}
         />
-      </GeneralCard>
-    </HomeLayout>
+      </LoginCard>
+    </LoginLayout>
   );
 }

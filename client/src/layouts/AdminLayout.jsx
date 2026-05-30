@@ -1,19 +1,23 @@
 import React from 'react';
 import { useAuth } from '../contexts/authContext';
-import Layout from './Layout';
-import { adminNavbarContent } from '../utility/navbar';
+import PortalShell from '../components/portal/PortalShell';
+import { adminNavItems } from '../utility/portalNav';
 
 export default function AdminLayout({ isLoading, children }) {
-  const { setAdminData } = useAuth();
-  const { options, functionalItem } = adminNavbarContent(setAdminData);
+  const { adminData, setAdminData } = useAuth();
 
   return (
-    <Layout
+    <PortalShell
       isLoading={isLoading}
-      navbarOptions={options}
-      navbarFunctionalItem={functionalItem}
+      roleLabel="Admin Portal"
+      navItems={adminNavItems}
+      user={adminData}
+      onLogout={() => {
+        setAdminData(null);
+        localStorage.removeItem('admin');
+      }}
     >
-      <div className='mt-4'>{children}</div>
-    </Layout>
+      <div className="inst-page">{children}</div>
+    </PortalShell>
   );
 }

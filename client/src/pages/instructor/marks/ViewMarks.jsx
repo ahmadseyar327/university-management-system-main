@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import InstructorLayout from '../../../layouts/InstructorLayout';
+import PageHeader from '../../../components/instructor/PageHeader';
+import ContentCard from '../../../components/instructor/ContentCard';
 import { fetchResponse } from '../../../api/service';
 import { instructorEndpoints } from '../../../api/endpoints/instructorEndpoints';
 import { toast } from 'react-toastify';
@@ -26,20 +28,17 @@ export default function ViewMarks() {
   useEffect(() => {
     async function fetchStudents() {
       try {
-        let res;
-        res = await fetchResponse(
+        const res = await fetchResponse(
           courseEndpoints.getStudentsOfInstructor(instructorId),
           0,
           null
         );
-        const resData = res.data;
         if (!res.success) {
           toast.error(res.message, toastErrorObject);
           setIsLoading(false);
           return;
         }
-        console.log('Log data (Instructor Students)', resData);
-        setStudents(resData);
+        setStudents(res.data);
         setIsLoading(false);
       } catch (error) {
         console.log(error);
@@ -51,9 +50,9 @@ export default function ViewMarks() {
 
   useEffect(() => {
     async function fetchData() {
+      setIsLoading(true);
       try {
-        let res;
-        res = await fetchResponse(
+        const res = await fetchResponse(
           instructorEndpoints.getAcademics(
             instructorId,
             temporarySelection.course,
@@ -63,21 +62,23 @@ export default function ViewMarks() {
           0,
           null
         );
-        const resData = res.data;
         if (!res.success) {
           toast.error(res.message, toastErrorObject);
           setIsLoading(false);
           return;
         }
-        console.log('Log data (Academics)', resData);
-        setAcademics(resData ? {
-          ...resData,
-          marks: resData?.marks?.map((m) => ({
-            ...m,
-            name: m.fname + ' ' + m.lname,
-            isPublic: m.isPublic === undefined ? true : m.isPublic
-          })),
-        } : null);
+        setAcademics(
+          res.data
+            ? {
+                ...res.data,
+                marks: res.data?.marks?.map((m) => ({
+                  ...m,
+                  name: m.fname + ' ' + m.lname,
+                  isPublic: m.isPublic === undefined ? true : m.isPublic,
+                })),
+              }
+            : null
+        );
         setIsLoading(false);
       } catch (error) {
         console.log(error);
@@ -88,31 +89,40 @@ export default function ViewMarks() {
       temporarySelection.course &&
       temporarySelection.examType &&
       temporarySelection.activityNumber
-    )
+    ) {
       fetchData();
+    }
   }, [instructorId, temporarySelection]);
+
+  const courseOptions = students
+    .filter((student) => {
+      const courseId = student.courseId;
+      if (!uniqueCourseIds[courseId]) {
+        uniqueCourseIds[courseId] = true;
+        return true;
+      }
+      return false;
+    })
+    .sort((a, b) => a.courseTitle.localeCompare(b.courseTitle))
+    .map((student) => ({
+      value: student.courseId,
+      title: student.courseTitle,
+    }));
 
   return (
     <InstructorLayout isLoading={isLoading}>
-      <div className='row mb-4'>
-        <div className='col-md col-md-6'>
+      <PageHeader
+        title="View & Update Marks"
+        subtitle="Find and edit previously posted marks."
+      />
+
+      <ContentCard title="Search Criteria" subtitle="Select course and exam details">
+        <div className="inst-filter-row">
           <SelectField
-            label={'Select Course'}
-            options={students
-              .filter((student) => {
-                const courseId = student.courseId;
-                if (!uniqueCourseIds[courseId]) {
-                  uniqueCourseIds[courseId] = true;
-                  return true;
-                }
-                return false;
-              })
-              .sort((a, b) => a.courseTitle.localeCompare(b.courseTitle))
-              .map((student) => ({
-                value: student.courseId,
-                title: student.courseTitle,
-              }))}
-            value={temporarySelection?.course}
+            variant="instructor"
+            label="Course"
+            options={courseOptions}
+            value={temporarySelection.course}
             onChange={(event) =>
               setTemporarySelection({
                 ...temporarySelection,
@@ -120,12 +130,11 @@ export default function ViewMarks() {
               })
             }
           />
-        </div>
-        <div className='col-md col-md-3'>
           <SelectField
-            label={'Select Exam Type'}
+            variant="instructor"
+            label="Exam Type"
             options={examTypes?.map((exam) => ({ value: exam, title: exam }))}
-            value={temporarySelection?.examType}
+            value={temporarySelection.examType}
             onChange={(event) =>
               setTemporarySelection({
                 ...temporarySelection,
@@ -133,11 +142,10 @@ export default function ViewMarks() {
               })
             }
           />
-        </div>
-        <div className='col-md col-md-3'>
           <InputField
-            label={'Enter Activity Number'}
-            type={'number'}
+            variant="instructor"
+            label="Activity Number"
+            type="number"
             value={temporarySelection.activityNumber}
             onChange={(event) =>
               setTemporarySelection({
@@ -149,8 +157,11 @@ export default function ViewMarks() {
             min={1}
           />
         </div>
-      </div>
-      <UpdateMarks data={academics} setData={setAcademics} />
+      </ContentCard>
+
+      <ContentCard title="Marks Record" className="mt-4">
+        <UpdateMarks data={academics} setData={setAcademics} />
+      </ContentCard>
     </InstructorLayout>
   );
 }

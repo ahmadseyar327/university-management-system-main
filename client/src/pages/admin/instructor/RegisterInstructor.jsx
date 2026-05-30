@@ -1,21 +1,21 @@
-import React, { useState } from "react";
-import GeneralCard from "../../../components/cards/GeneralCard";
-import SignupForm from "../../../components/forms/SignupForm";
-import { fetchResponse } from "../../../api/service";
-import { toast } from "react-toastify";
-import { useNavigate } from "react-router-dom";
-import { toastSuccessObject, toastErrorObject } from "../../../utility/toasts";
-import AdminLayout from "../../../layouts/AdminLayout";
-import { instructorEndpoints } from "../../../api/endpoints/instructorEndpoints";
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import AdminLayout from '../../../layouts/AdminLayout';
+import PageHeader from '../../../components/instructor/PageHeader';
+import ContentCard from '../../../components/instructor/ContentCard';
+import SignupForm from '../../../components/forms/SignupForm';
+import { fetchResponse } from '../../../api/service';
+import { toast } from 'react-toastify';
+import { toastSuccessObject, toastErrorObject } from '../../../utility/toasts';
+import { instructorEndpoints } from '../../../api/endpoints/instructorEndpoints';
 
 export default function RegisterInstructor() {
   const navigate = useNavigate();
-
   const [signupDetails, setSignupDetails] = useState({
-    fname: "",
-    lname: "",
-    email: "",
-    password: "",
+    fname: '',
+    lname: '',
+    email: '',
+    password: '',
   });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -28,15 +28,13 @@ export default function RegisterInstructor() {
         1,
         signupDetails
       );
-      const data = res.data;
       if (!res.success) {
         toast.error(res.message, toastErrorObject);
         setIsLoading(false);
         return;
       }
       toast.success(res.message, toastSuccessObject);
-      console.log("Log data", data);
-      navigate("/admin/instructors/action");
+      navigate('/admin/instructors/action');
     } catch (error) {
       console.log(error);
       setIsLoading(false);
@@ -45,17 +43,22 @@ export default function RegisterInstructor() {
 
   return (
     <AdminLayout isLoading={isLoading}>
-      <div
-        className="d-flex align-items-center justify-content-center"
-        style={{ minHeight: "81vh" }}
-      >
-        <GeneralCard header={"Instructor Registration"}>
+      <PageHeader
+        title="Register Instructor"
+        subtitle="Create a new instructor account."
+      />
+
+      <div className="max-w-lg mx-auto">
+        <ContentCard title="Instructor Details" subtitle="Fill in the registration form">
           <SignupForm
+            variant="auth"
             signupDetails={signupDetails}
             setSignupDetails={setSignupDetails}
             signup={handleSignup}
+            submitLabel="Register Instructor"
+            showLoginLink={false}
           />
-        </GeneralCard>
+        </ContentCard>
       </div>
     </AdminLayout>
   );

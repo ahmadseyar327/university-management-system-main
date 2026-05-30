@@ -8,49 +8,64 @@ export default function ActionDynamicTable({
   data,
   dataAttributes,
   handleAction,
+  variant,
 }) {
+  const tableClass =
+    variant === 'instructor'
+      ? 'inst-table'
+      : 'table table-sm ' + (styles || '');
+
+  const theadClass =
+    variant === 'instructor' ? '' : 'bg-light text-secondary';
+
   return (
-    <TableLayout>
-      <table className={'table table-sm ' + styles}>
-        <thead className='bg-light text-secondary'>
+    <TableLayout variant={variant}>
+      <table className={tableClass}>
+        <thead className={theadClass}>
           <tr>
-            {headers?.map((header, index) => {
-              return <th key={index}>{header}</th>;
-            })}
+            {headers?.map((header, index) => (
+              <th key={index}>{header}</th>
+            ))}
           </tr>
         </thead>
         <tbody>
           {data?.length ? (
-            data.map((item, index) => {
-              return (
-                <tr key={index}>
-                  {dataAttributes.map((attribute, index) => {
-                    return (
-                      <td key={index}>
-                        {attribute !== 'action' ? (
-                          attribute === 'createdAt' ? (
-                            moment(item[attribute]).format('LL')
-                          ) : (
-                            item[attribute]
-                          )
-                        ) : (
-                          <button
-                            onClick={() => handleAction(item._id)}
-                            className='btn btn-sm btn-danger'
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })
+            data.map((item, index) => (
+              <tr key={index}>
+                {dataAttributes.map((attribute, attrIndex) => (
+                  <td key={attrIndex}>
+                    {attribute !== 'action' ? (
+                      attribute === 'createdAt' ? (
+                        moment(item[attribute]).format('LL')
+                      ) : (
+                        item[attribute]
+                      )
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleAction(item._id)}
+                        className={
+                          variant === 'instructor'
+                            ? 'inst-btn-danger'
+                            : 'btn btn-sm btn-danger'
+                        }
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </td>
+                ))}
+              </tr>
+            ))
           ) : (
             <tr>
-              <td className='text-center' colSpan={headers?.length}>
-                No record found.
+              <td
+                className={
+                  variant === 'instructor' ? 'inst-table-empty' : 'text-center'
+                }
+                colSpan={headers?.length}
+              >
+                No records found.
               </td>
             </tr>
           )}

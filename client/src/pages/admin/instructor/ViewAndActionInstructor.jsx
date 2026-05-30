@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from "react";
-import AdminLayout from "../../../layouts/AdminLayout";
-import { instructorEndpoints } from "../../../api/endpoints/instructorEndpoints";
-import { fetchResponse } from "../../../api/service";
-import { toast } from "react-toastify";
-import { toastErrorObject } from "../../../utility/toasts";
-import ActionDynamicTable from "../../../components/tables/ActionDynamicTable";
+import React, { useEffect, useState } from 'react';
+import AdminLayout from '../../../layouts/AdminLayout';
+import PageHeader from '../../../components/instructor/PageHeader';
+import ContentCard from '../../../components/instructor/ContentCard';
+import { instructorEndpoints } from '../../../api/endpoints/instructorEndpoints';
+import { fetchResponse } from '../../../api/service';
+import { toast } from 'react-toastify';
+import { toastErrorObject } from '../../../utility/toasts';
+import ActionDynamicTable from '../../../components/tables/ActionDynamicTable';
 
 export default function ViewAndActionInstructor() {
   const [instructors, setInstructors] = useState([]);
@@ -13,26 +15,23 @@ export default function ViewAndActionInstructor() {
   useEffect(() => {
     async function fetchData() {
       try {
-        let res;
-        res = await fetchResponse(
+        const res = await fetchResponse(
           instructorEndpoints.getInstructors(),
           0,
           null
         );
-        const resData = res.data;
         if (!res.success) {
           toast.error(res.message, toastErrorObject);
           setIsLoading(false);
           return;
         }
-        console.log("Log data", resData);
-        setInstructors(resData?.sort((a, b) => {
-          const fnameComparison = a.fname.localeCompare(b.fname);
-          if (fnameComparison !== 0) {
-            return fnameComparison;
-          }
-          return a.lname.localeCompare(b.lname);
-        }));        
+        setInstructors(
+          res.data?.sort((a, b) => {
+            const fnameComparison = a.fname.localeCompare(b.fname);
+            if (fnameComparison !== 0) return fnameComparison;
+            return a.lname.localeCompare(b.lname);
+          })
+        );
         setIsLoading(false);
       } catch (error) {
         console.log(error);
@@ -43,27 +42,20 @@ export default function ViewAndActionInstructor() {
   }, []);
 
   async function handleDelete(id) {
-    let result = window.confirm("Are you sure to Delete this Instructor?");
-    if (!result) return;
+    if (!window.confirm('Are you sure you want to delete this instructor?')) return;
     setIsLoading(true);
     try {
-      let res;
-      res = await fetchResponse(
+      const res = await fetchResponse(
         instructorEndpoints.deleteSingleInstructor(id),
         3,
         null
       );
-      const resData = res.data;
       if (!res.success) {
         toast.error(res.message, toastErrorObject);
         setIsLoading(false);
         return;
       }
-      console.log("Log data", resData);
-      
-      // updating state
-      let duplicateArray = [...instructors];
-      setInstructors(duplicateArray.filter((item) => item._id !== id));
+      setInstructors((prev) => prev.filter((item) => item._id !== id));
       setIsLoading(false);
     } catch (error) {
       console.log(error);
@@ -73,19 +65,29 @@ export default function ViewAndActionInstructor() {
 
   return (
     <AdminLayout isLoading={isLoading}>
-      <ActionDynamicTable
-        styles={"table-bordered"}
-        headers={[
-          "First Name",
-          "Last Name",
-          "Email  Address",
-          "Joining Date",
-          "Action",
-        ]}
-        data={instructors}
-        dataAttributes={["fname", "lname", "email", "createdAt", "action"]}
-        handleAction={handleDelete}
+      <PageHeader
+        title="Instructors"
+        subtitle="View and manage all registered instructors."
       />
+
+      <ContentCard
+        title="Instructor List"
+        subtitle={`${instructors.length} instructor(s) registered`}
+      >
+        <ActionDynamicTable
+          variant="instructor"
+          headers={[
+            'First Name',
+            'Last Name',
+            'Email Address',
+            'Joining Date',
+            'Action',
+          ]}
+          data={instructors}
+          dataAttributes={['fname', 'lname', 'email', 'createdAt', 'action']}
+          handleAction={handleDelete}
+        />
+      </ContentCard>
     </AdminLayout>
   );
 }

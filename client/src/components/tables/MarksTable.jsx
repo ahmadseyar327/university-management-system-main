@@ -9,87 +9,94 @@ export default function MarksTable({
   setData,
   dataAttributes,
   totalMarks,
+  variant,
 }) {
   function handleChangeIsPublic(item) {
-    setData((prevData) => {
-      const updatedData = prevData.map((x) => {
-        if (x.studentId === item.studentId) {
-          return {
-            ...x,
-            isPublic: !item.isPublic,
-          };
-        }
-        return x;
-      });
-      return updatedData;
-    });
+    setData((prevData) =>
+      prevData.map((x) =>
+        x.studentId === item.studentId ? { ...x, isPublic: !item.isPublic } : x
+      )
+    );
   }
 
+  const tableClass =
+    variant === 'instructor'
+      ? 'inst-table'
+      : 'table table-sm ' + (styles || '');
+
+  const theadClass =
+    variant === 'instructor' ? '' : 'bg-light text-secondary';
+
   return (
-    <TableLayout>
-      <table className={'table table-sm ' + styles}>
-        <thead className='bg-light text-secondary'>
+    <TableLayout variant={variant}>
+      <table className={tableClass}>
+        <thead className={theadClass}>
           <tr>
-            {headers?.map((header, index) => {
-              return <th key={index}>{header}</th>;
-            })}
+            {headers?.map((header, index) => (
+              <th key={index}>{header}</th>
+            ))}
           </tr>
         </thead>
         <tbody>
           {data?.length ? (
-            data.map((item, index) => {
-              return (
-                <tr key={index}>
-                  {dataAttributes.map((attribute, index) => {
-                    return (
-                      <td
-                        onClick={
-                          attribute === 'name'
-                            ? () => handleChangeIsPublic(item)
-                            : null
-                        }
-                        className={`${attribute === 'name' && !item?.isPublic && 'text-decoration-line-through'} ${attribute === 'name' && 'cursor-pointer'}`}
-                        key={index}
-                      >
-                        {attribute === 'obtainedMarks' ? (
-                          <InputField
-                            type={'number'}
-                            value={item[attribute]}
-                            onChange={(event) => {
-                              setData((prevData) => {
-                                const updatedData = prevData.map((x) => {
-                                  if (x.studentId === item.studentId) {
-                                    return {
-                                      ...x,
-                                      obtainedMarks: event.target.value,
-                                    };
-                                  }
-                                  return x;
-                                });
-                                return updatedData;
-                              });
-                            }}
-                            required={true}
-                            max={totalMarks}
-                          />
-                        ) : (
-                          item[attribute]
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })
+            data.map((item, index) => (
+              <tr key={index}>
+                {dataAttributes.map((attribute, attrIndex) => (
+                  <td
+                    onClick={
+                      attribute === 'name'
+                        ? () => handleChangeIsPublic(item)
+                        : null
+                    }
+                    className={`${attribute === 'name' && !item?.isPublic ? 'text-decoration-line-through' : ''} ${attribute === 'name' ? 'cursor-pointer' : ''}`}
+                    key={attrIndex}
+                    title={
+                      attribute === 'name'
+                        ? 'Click to toggle visibility'
+                        : undefined
+                    }
+                  >
+                    {attribute === 'obtainedMarks' ? (
+                      <InputField
+                        variant={variant}
+                        type="number"
+                        value={item[attribute]}
+                        onChange={(event) => {
+                          setData((prevData) =>
+                            prevData.map((x) =>
+                              x.studentId === item.studentId
+                                ? { ...x, obtainedMarks: event.target.value }
+                                : x
+                            )
+                          );
+                        }}
+                        required={true}
+                        max={totalMarks}
+                      />
+                    ) : (
+                      item[attribute]
+                    )}
+                  </td>
+                ))}
+              </tr>
+            ))
           ) : (
             <tr>
-              <td className='text-center' colSpan={headers?.length}>
-                No record found.
+              <td
+                className={variant === 'instructor' ? 'inst-table-empty' : 'text-center'}
+                colSpan={headers?.length}
+              >
+                No records found.
               </td>
             </tr>
           )}
         </tbody>
       </table>
+      {variant === 'instructor' ? (
+        <p className="inst-hint px-4 pb-3">
+          Click a student name to toggle mark visibility.
+        </p>
+      ) : null}
     </TableLayout>
   );
 }

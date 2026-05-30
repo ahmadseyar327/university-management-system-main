@@ -1,19 +1,23 @@
 import React from 'react';
 import { useAuth } from '../contexts/authContext';
-import Layout from './Layout';
-import { studentNavbarContent } from '../utility/navbar';
+import PortalShell from '../components/portal/PortalShell';
+import { studentNavItems } from '../utility/portalNav';
 
 export default function StudentLayout({ isLoading, children }) {
-  const { setStudentData } = useAuth();
-  const { options, functionalItem } = studentNavbarContent(setStudentData);
+  const { studentData, setStudentData } = useAuth();
 
   return (
-    <Layout
+    <PortalShell
       isLoading={isLoading}
-      navbarOptions={options}
-      navbarFunctionalItem={functionalItem}
+      roleLabel="Student Portal"
+      navItems={studentNavItems}
+      user={studentData}
+      onLogout={() => {
+        setStudentData(null);
+        localStorage.removeItem('student');
+      }}
     >
-      <div className='mt-4'>{children}</div>
-    </Layout>
+      <div className="inst-page">{children}</div>
+    </PortalShell>
   );
 }

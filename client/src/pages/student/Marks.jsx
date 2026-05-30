@@ -1,43 +1,40 @@
-import React, { useEffect, useState } from "react";
-import StudentLayout from "../../layouts/StudentLayout";
-import { fetchResponse } from "../../api/service";
-import { studentEndpoints } from "../../api/endpoints/studentEndpoints";
-import { toastErrorObject } from "../../utility/toasts";
-import { toast } from "react-toastify";
-import DynamicTable from "../../components/tables/DynamicTable";
-import ActivityCard from "../../components/cards/ActivityCard";
-import SelectField from "../../components/inputs/SelectField";
+import React, { useEffect, useState } from 'react';
+import StudentLayout from '../../layouts/StudentLayout';
+import PageHeader from '../../components/instructor/PageHeader';
+import ContentCard from '../../components/instructor/ContentCard';
+import { fetchResponse } from '../../api/service';
+import { studentEndpoints } from '../../api/endpoints/studentEndpoints';
+import { toastErrorObject } from '../../utility/toasts';
+import { toast } from 'react-toastify';
+import DynamicTable from '../../components/tables/DynamicTable';
+import ActivityCard from '../../components/cards/ActivityCard';
+import SelectField from '../../components/inputs/SelectField';
 
 export default function Marks() {
-  const studentId = JSON.parse(localStorage.getItem("student"))._id;
-
+  const studentId = JSON.parse(localStorage.getItem('student'))._id;
   const [marksData, setMarksData] = useState(null);
   const [courses, setCourses] = useState([]);
   const [examTypes, setExamTypes] = useState([]);
-  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [selectedCourse, setSelectedCourse] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-
   const [examTypesState, setExamTypesState] = useState(null);
 
   useEffect(() => {
     async function fetchCourseAndExamTypeNames() {
       try {
-        let res;
-        res = await fetchResponse(
+        const res = await fetchResponse(
           studentEndpoints.getCourseAndExamTypeNames(studentId),
           0,
           null
         );
-        const resData = res.data;
         if (!res.success) {
           toast.error(res.message, toastErrorObject);
           return;
         }
-        console.log("Log data", resData);
-        setCourses(resData?.courses);
-        setExamTypes(resData?.examTypes);
+        setCourses(res.data?.courses);
+        setExamTypes(res.data?.examTypes);
         setExamTypesState(
-          resData.examTypes?.reduce((acc, examType) => {
+          res.data.examTypes?.reduce((acc, examType) => {
             acc[examType] = false;
             return acc;
           }, {})
@@ -55,21 +52,18 @@ export default function Marks() {
   async function handleFetchAcademics(examType) {
     setIsLoading(true);
     try {
-      let res;
-      res = await fetchResponse(
+      const res = await fetchResponse(
         studentEndpoints.getAcademics(studentId, selectedCourse, examType),
         0,
         null
       );
-      const resData = res.data;
       if (!res.success) {
         toast.error(res.message, toastErrorObject);
         return;
       }
-      console.log("Log data", resData);
-      const sortedMarksData = resData?.sort((a, b) => {
-        return a.activityNumber - b.activityNumber;
-      });
+      const sortedMarksData = res.data?.sort(
+        (a, b) => a.activityNumber - b.activityNumber
+      );
       setMarksData((prevMarksData) => ({
         ...prevMarksData,
         [examType]: sortedMarksData,
@@ -82,71 +76,79 @@ export default function Marks() {
   }
 
   return (
-    <>
-      <StudentLayout isLoading={isLoading}>
+    <StudentLayout isLoading={isLoading}>
+      <PageHeader
+        title="Marks"
+        subtitle="View your marks and grades by course and exam type."
+      />
+
+      <ContentCard title="Select Course">
         <SelectField
-          label={"Course | Instructor"}
+          variant="instructor"
+          label="Course | Instructor"
           options={courses?.map((course) => ({
-            title: course.title + " | " + course.instructor,
+            title: course.title + ' | ' + course.instructor,
             value: course.courseId,
           }))}
           value={selectedCourse}
           onChange={(event) => {
             setSelectedCourse(event.target.value);
             setMarksData([]);
-            setExamTypesState((prevExamTypesData) =>
-              Object.keys(prevExamTypesData).map(
-                (examType) => (prevExamTypesData[examType] = false)
-              )
-            );
+            setExamTypesState((prev) => {
+              const next = { ...prev };
+              Object.keys(next).forEach((key) => {
+                next[key] = false;
+              });
+              return next;
+            });
           }}
         />
-        <div className="pt-3">
-          {examTypes?.map((examType, index) => {
-            return (
-              <div className="py-1" key={index}>
-                <ActivityCard
-                  header={examType}
-                  isExpanded={examTypesState[examType]}
-                  handleExpanded={() => {
-                    if (!examTypesState[examType]) {
-                      if (!selectedCourse) {
-                        toast.warning(
-                          "Please select a Course.",
-                          toastErrorObject
-                        );
-                        return;
-                      }
-                      handleFetchAcademics(examType);
-                    }
-                    setExamTypesState({
-                      ...examTypesState,
-                      [examType]: !examTypesState[examType],
-                    });
-                  }}
-                >
-                  <DynamicTable
-                    styles={"table-bordered"}
-                    headers={[
-                      "Activity Number",
-                      "Weightage",
-                      "Total Marks",
-                      "Obtained Marks",
-                    ]}
-                    data={marksData ? marksData[examType] : []}
-                    dataAttributes={[
-                      "activityNumber",
-                      "weightage",
-                      "totalMarks",
-                      "marks",
-                    ]}
-                  />
-                </ActivityCard>
-              </div>
-            );
-          })}
-        </div>
-      </StudentLayout>
-    </>
+      </ContentCard>
+
+      <ContentCard title="Exam Results" subtitle="Expand an exam type to view marks" className="mt-4">
+        {examTypes?.length ? (
+          examTypes.map((examType, index) => (
+            <ActivityCard
+              key={index}
+              variant="instructor"
+              header={examType}
+              isExpanded={examTypesState?.[examType]}
+              handleExpanded={() => {
+                if (!examTypesState[examType]) {
+                  if (!selectedCourse) {
+                    toast.warning('Please select a course.', toastErrorObject);
+                    return;
+                  }
+                  handleFetchAcademics(examType);
+                }
+                setExamTypesState({
+                  ...examTypesState,
+                  [examType]: !examTypesState[examType],
+                });
+              }}
+            >
+              <DynamicTable
+                variant="instructor"
+                headers={[
+                  'Activity Number',
+                  'Weightage',
+                  'Total Marks',
+                  'Obtained Marks',
+                ]}
+                data={marksData ? marksData[examType] : []}
+                dataAttributes={[
+                  'activityNumber',
+                  'weightage',
+                  'totalMarks',
+                  'marks',
+                ]}
+              />
+            </ActivityCard>
+          ))
+        ) : (
+          <p className="inst-table-empty text-center py-6">No exam types available.</p>
+        )}
+      </ContentCard>
+    </StudentLayout>
   );
 }

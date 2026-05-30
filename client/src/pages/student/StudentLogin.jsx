@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import HomeLayout from '../../layouts/HomeLayout';
-import GeneralCard from '../../components/cards/GeneralCard';
+import LoginLayout from '../../layouts/LoginLayout';
+import LoginCard from '../../components/cards/LoginCard';
 import LoginForm from '../../components/forms/LoginForm';
 import { fetchResponse } from '../../api/service';
 import { studentEndpoints } from '../../api/endpoints/studentEndpoints';
@@ -11,7 +11,6 @@ import { useNavigate } from 'react-router-dom';
 
 export default function StudentLogin() {
   const { setStudentData } = useAuth();
-
   const navigate = useNavigate();
 
   const [loginDetails, setLoginDetails] = useState({
@@ -37,7 +36,6 @@ export default function StudentLogin() {
         return;
       }
       toast.success(res.message, toastSuccessObject);
-      console.log('Log data', data);
       setStudentData(data);
       localStorage.setItem('student', JSON.stringify(data));
       navigate('/student');
@@ -48,15 +46,15 @@ export default function StudentLogin() {
   }
 
   return (
-    <HomeLayout isLoading={isLoading}>
-      <GeneralCard header={'Student Login'}>
+    <LoginLayout isLoading={isLoading}>
+      <LoginCard title="Student Login" subtitle="Sign in to your account">
         <LoginForm
           loginDetails={loginDetails}
           setLoginDetails={setLoginDetails}
           login={handleLogin}
-          domain={'student'}
+          domain="student"
         />
-      </GeneralCard>
-    </HomeLayout>
+      </LoginCard>
+    </LoginLayout>
   );
 }

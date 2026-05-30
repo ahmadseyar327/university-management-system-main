@@ -5,12 +5,12 @@ import { studentEndpoints } from '../../api/endpoints/studentEndpoints';
 import { toastErrorObject, toastSuccessObject } from '../../utility/toasts';
 import { toast } from 'react-toastify';
 import StudentLayout from '../../layouts/StudentLayout';
-import GeneralCard from '../../components/cards/GeneralCard';
+import PageHeader from '../../components/instructor/PageHeader';
+import ContentCard from '../../components/instructor/ContentCard';
 import SignupForm from '../../components/forms/SignupForm';
 
 export default function StudentSettings() {
   const studentId = JSON.parse(localStorage.getItem('student'))._id;
-
   const { studentData, setStudentData } = useAuth();
 
   const [studentDetails, setStudentDetails] = useState({
@@ -30,7 +30,6 @@ export default function StudentSettings() {
         2,
         studentDetails
       );
-      const data = res.data;
       if (!res.success) {
         toast.error(res.message, toastErrorObject);
         setIsLoading(false);
@@ -38,8 +37,7 @@ export default function StudentSettings() {
       }
       toast.success(res.message, toastSuccessObject);
 
-      // state update
-      let updatedData = {
+      const updatedData = {
         ...studentData,
         fname: studentDetails.fname,
         lname: studentDetails.lname,
@@ -48,7 +46,6 @@ export default function StudentSettings() {
       };
       setStudentData(updatedData);
       localStorage.setItem('student', JSON.stringify(updatedData));
-      console.log('Log data', data);
       setIsLoading(false);
     } catch (error) {
       console.log(error);
@@ -58,18 +55,21 @@ export default function StudentSettings() {
 
   return (
     <StudentLayout isLoading={isLoading}>
-      <div
-        className='d-flex align-items-center justify-content-center'
-        style={{ minHeight: '81vh' }}
-      >
-        <GeneralCard header={'Edit Information'}>
+      <PageHeader
+        title="Settings"
+        subtitle="Update your profile and account credentials."
+      />
+
+      <div className="max-w-lg mx-auto">
+        <ContentCard title="Profile Information" subtitle="Edit your personal details">
           <SignupForm
+            variant="auth"
             signupDetails={studentDetails}
             setSignupDetails={setStudentDetails}
             signup={handleUpdate}
             update={true}
           />
-        </GeneralCard>
+        </ContentCard>
       </div>
     </StudentLayout>
   );
