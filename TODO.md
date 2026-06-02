@@ -7,6 +7,6 @@
 - [ ] 4) Update Instructor UI: remove old course-based marks flow and replace with semester-scoped marks (semester + course selected) using `/academic/course-result` and `/academic/course-result/instructor`.
 - [ ] 5) Update Admin UI: remove old course catalog/offer/assign UI flows and replace with semester registration + publish + promotion using academic endpoints.
 - [ ] 6) Remove/disable old course-system UI flows from routes and navigation (student/instructor/admin).
--
+
 - [ ] 7) Verify compilation and run-time wiring (build/start client) and fix any regressions.
 
