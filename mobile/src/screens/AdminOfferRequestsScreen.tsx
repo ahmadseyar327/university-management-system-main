@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { DrawerScreenProps } from "@react-navigation/drawer";
 import { useFocusEffect } from "@react-navigation/native";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -30,7 +30,7 @@ function initials(row: Record<string, unknown>) {
   return `${String(row.fname ?? "").charAt(0)}${String(row.lname ?? "").charAt(0)}`.toUpperCase();
 }
 
-export default function AdminOfferRequestsScreen({ navigation }: Props) {
+export default function AdminOfferRequestsScreen(_props: Props) {
   const { adminData } = useAuth();
   const adminId = mongoId(adminData);
   const [programs, setPrograms] = useState<Record<string, unknown>[]>([]);
@@ -76,8 +76,9 @@ export default function AdminOfferRequestsScreen({ navigation }: Props) {
   const loadSemesters = useCallback(async () => {
     if (!programId) return;
     const res = await fetchResponse(programEndpoints.getProgramById(programId), 0, null);
-    if (res?.success) {
-      const sems = (res.data?.semesters as Semester[]) ?? [];
+    if (res?.success && res.data) {
+      const programData = res.data as Record<string, unknown>;
+      const sems = (programData.semesters as Semester[]) ?? [];
       setSemesters(sems);
       if (sems.length) setSemesterNumber(String(sems[0].semesterNumber ?? 1));
     }
@@ -90,8 +91,9 @@ export default function AdminOfferRequestsScreen({ navigation }: Props) {
       0,
       null
     );
-    if (res?.success) {
-      setSemesterCourses((res.data?.courses as Record<string, unknown>[]) ?? []);
+    if (res?.success && res.data) {
+      const semesterData = res.data as Record<string, unknown>;
+      setSemesterCourses((semesterData.courses as Record<string, unknown>[]) ?? []);
     } else {
       setSemesterCourses([]);
     }
@@ -211,7 +213,6 @@ export default function AdminOfferRequestsScreen({ navigation }: Props) {
       <ScreenHeader
         title="Offer semester courses"
         subtitle="Pick program, semester, instructor, then course."
-        onBack={() => navigation.goBack()}
       />
 
       <ScrollView

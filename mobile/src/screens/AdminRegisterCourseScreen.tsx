@@ -59,8 +59,9 @@ export default function AdminRegisterCourseScreen({ navigation }: Props) {
     }
     void (async () => {
       const res = await fetchResponse(programEndpoints.getProgramById(programId), 0, null);
-      if (res?.success) {
-        const sems = (res.data?.semesters as Semester[]) ?? [];
+      if (res?.success && res.data) {
+        const programData = res.data as Record<string, unknown>;
+        const sems = (programData.semesters as Semester[]) ?? [];
         setSemesters(sems);
         if (sems.length) setSemesterId(String(sems[0]._id ?? ""));
       }

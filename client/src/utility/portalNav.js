@@ -61,7 +61,7 @@ export const instructorNavItems = [
   { label: 'Settings', path: '/instructor/settings', icon: icon.settings },
 ];
 
-export const studentNavItems = [
+const studentNavItemsBase = [
   { label: 'Dashboard', path: '/student', icon: icon.home, exact: true },
   { label: 'My Courses', path: '/student/courses', icon: icon.courses },
   { label: 'Enroll in Program', path: '/student/enroll', icon: icon.register },
@@ -69,6 +69,13 @@ export const studentNavItems = [
   { label: 'Marks', path: '/student/marks', icon: icon.marks },
   { label: 'Settings', path: '/student/settings', icon: icon.settings },
 ];
+
+export const studentNavItems = studentNavItemsBase;
+
+export function getStudentNavItems(isEnrolled = false) {
+  if (!isEnrolled) return studentNavItemsBase;
+  return studentNavItemsBase.filter((item) => item.path !== '/student/enroll');
+}
 
 export const adminNavItems = [
   { label: 'Dashboard', path: '/admin', icon: icon.home, exact: true },

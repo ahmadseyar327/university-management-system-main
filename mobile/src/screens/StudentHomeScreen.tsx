@@ -105,7 +105,9 @@ export default function StudentHomeScreen({ navigation }: Props) {
 
       <View style={styles.actions}>
         <QuickActionCard icon="library-outline" label="My courses" onPress={() => navigation.navigate("StudentCourses")} delay={160} />
-        <QuickActionCard icon="school-outline" label="Enroll" onPress={() => navigation.navigate("StudentRegister")} delay={200} />
+        {!dashboard ? (
+          <QuickActionCard icon="school-outline" label="Enroll" onPress={() => navigation.navigate("StudentRegister")} delay={200} />
+        ) : null}
         <QuickActionCard icon="bar-chart-outline" label="Marks" onPress={() => navigation.navigate("StudentMarks")} delay={240} />
         <QuickActionCard icon="calendar-outline" label="Attendance" onPress={() => navigation.navigate("StudentAttendance")} delay={280} />
       </View>

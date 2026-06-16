@@ -1,9 +1,19 @@
 const courseSchema = require('../models/courseModel');
 const offeredCourseSchema = require('../models/offeredCourseModel');
+const programSchema = require('../models/programModel');
 const registeredCourseSchema = require('../models/registeredCourseModel');
 const semesterSchema = require('../models/semesterModel');
 const studentAcademicRecordSchema = require('../models/studentAcademicRecordModel');
 const { STUDENT_STATUS, TOTAL_SEMESTERS } = require('../utils/academicRules');
+
+async function getEnrollmentBlockMessage(existing, requestedProgramId) {
+  const enrolledProgram = await programSchema.findById(existing.programId);
+  const programName = enrolledProgram?.name ?? 'a program';
+  if (existing.programId === requestedProgramId) {
+    return `You are already enrolled in ${programName}.`;
+  }
+  return `You can only enroll in one program. You are already enrolled in ${programName}.`;
+}
 
 async function getSemesterCourses(programId, semesterNumber) {
   const semester = await semesterSchema.findOne({ programId, semesterNumber });
@@ -22,6 +32,11 @@ async function findApprovedInstructor(courseId) {
 }
 
 async function assignSemesterCourses(studentId, programId, semesterNumber) {
+  const record = await studentAcademicRecordSchema.findOne({ studentId });
+  if (!record || record.programId !== programId) {
+    return { assigned: [], skipped: [], message: 'Student is not enrolled in this program.' };
+  }
+
   const { semester, courses } = await getSemesterCourses(programId, semesterNumber);
   if (!semester) {
     return { assigned: [], skipped: [], message: 'Semester not found.' };
@@ -62,16 +77,29 @@ async function assignSemesterCourses(studentId, programId, semesterNumber) {
 async function enrollStudentInProgram(studentId, programId) {
   const existing = await studentAcademicRecordSchema.findOne({ studentId });
   if (existing) {
-    return { success: false, message: 'Student is already enrolled in a program.', record: existing };
+    const message = await getEnrollmentBlockMessage(existing, programId);
+    return { success: false, message, record: existing };
   }
 
-  const record = await studentAcademicRecordSchema.create({
-    studentId,
-    programId,
-    currentSemester: 1,
-    enrollmentDate: new Date(),
-    status: STUDENT_STATUS.ACTIVE,
-  });
+  let record;
+  try {
+    record = await studentAcademicRecordSchema.create({
+      studentId,
+      programId,
+      currentSemester: 1,
+      enrollmentDate: new Date(),
+      status: STUDENT_STATUS.ACTIVE,
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      const duplicate = await studentAcademicRecordSchema.findOne({ studentId });
+      const message = duplicate
+        ? await getEnrollmentBlockMessage(duplicate, programId)
+        : 'You can only enroll in one program.';
+      return { success: false, message, record: duplicate };
+    }
+    throw error;
+  }
 
   const assignment = await assignSemesterCourses(studentId, programId, 1);
 

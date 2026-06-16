@@ -13,12 +13,18 @@ import { mongoId } from "../utils/mongoId";
 import { toastError, toastSuccess } from "../utils/toasts";
 
 type Props = DrawerScreenProps<StudentTabParamList, "StudentRegister">;
+type ExistingEnrollment = {
+  programName?: string;
+  currentSemester?: number;
+  status?: string;
+};
 
 export default function StudentRegisterCourseScreen({ navigation }: Props) {
   const { studentData } = useAuth();
   const studentId = mongoId(studentData);
   const [programs, setPrograms] = useState<Record<string, unknown>[]>([]);
   const [programId, setProgramId] = useState("");
+  const [existingEnrollment, setExistingEnrollment] = useState<ExistingEnrollment | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -37,10 +43,18 @@ export default function StudentRegisterCourseScreen({ navigation }: Props) {
   useEffect(() => {
     void (async () => {
       setLoading(true);
+      if (studentId) {
+        const recordRes = await fetchResponse(academicEndpoints.getStudentRecord(studentId), 0, null);
+        if (recordRes?.success) {
+          setExistingEnrollment(recordRes.data as ExistingEnrollment);
+          setLoading(false);
+          return;
+        }
+      }
       await loadPrograms();
       setLoading(false);
     })();
-  }, [loadPrograms]);
+  }, [studentId, loadPrograms]);
 
   const opts: SelectOption[] = programs.map((p) => ({
     label: String(p.name ?? "Program"),
@@ -65,11 +79,35 @@ export default function StudentRegisterCourseScreen({ navigation }: Props) {
 
   if (loading) return <LoadingView />;
 
+  if (existingEnrollment) {
+    return (
+      <ScreenContainer>
+        <ScreenHeader
+          title="Already enrolled"
+          subtitle="Each student can only enroll in one program."
+          onBack={() => navigation.goBack()}
+        />
+        <FadeInView>
+          <View style={styles.panel}>
+            <Text style={styles.enrolledTitle}>{existingEnrollment.programName ?? "Your program"}</Text>
+            <Text style={styles.enrolledSub}>
+              Semester {existingEnrollment.currentSemester ?? "—"} · {existingEnrollment.status ?? "Active"}
+            </Text>
+            <Text style={styles.empty}>
+              You are already enrolled. View your courses from the dashboard.
+            </Text>
+            <PrimaryButton title="Go to dashboard" onPress={() => navigation.navigate("StudentOverview")} />
+          </View>
+        </FadeInView>
+      </ScreenContainer>
+    );
+  }
+
   return (
     <ScreenContainer>
       <ScreenHeader
         title="Enroll in program"
-        subtitle="Semester 1 courses are assigned automatically."
+        subtitle="Choose one program — enrollment is permanent."
         onBack={() => navigation.goBack()}
       />
 
@@ -99,4 +137,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   empty: { color: colors.textSecondary, textAlign: "center", paddingVertical: spacing.lg },
+  enrolledTitle: { fontWeight: "700", fontSize: 16, color: colors.text },
+  enrolledSub: { color: colors.textSecondary, fontSize: 13 },
 });

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { fetchResponse } from '../../api/service';
 import { toast } from 'react-toastify';
 import { toastErrorObject, toastSuccessObject } from '../../utility/toasts';
@@ -17,13 +18,21 @@ export default function EnrollProgram() {
 
   const [programs, setPrograms] = useState([]);
   const [programId, setProgramId] = useState('');
+  const [existingEnrollment, setExistingEnrollment] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    async function loadPrograms() {
+    async function loadData() {
       try {
         setIsLoading(true);
+        if (studentId) {
+          const recordRes = await fetchResponse(academicEndpoints.getStudentRecord(studentId), 0, null);
+          if (recordRes?.success) {
+            setExistingEnrollment(recordRes.data);
+            return;
+          }
+        }
         const res = await fetchResponse(programEndpoints.getPrograms(), 0, null);
         if (!res?.success) {
           toast.error(res?.message ?? 'Could not load programs', toastErrorObject);
@@ -37,8 +46,8 @@ export default function EnrollProgram() {
         setIsLoading(false);
       }
     }
-    loadPrograms();
-  }, []);
+    loadData();
+  }, [studentId]);
 
   async function enroll() {
     if (!studentId || !programId) return;
@@ -64,11 +73,33 @@ export default function EnrollProgram() {
     }
   }
 
+  if (existingEnrollment) {
+    return (
+      <StudentLayout isLoading={isLoading}>
+        <PageHeader
+          title="Already Enrolled"
+          subtitle="Each student can only be enrolled in one program."
+        />
+        <ContentCard
+          title={existingEnrollment.programName ?? 'Your program'}
+          subtitle={`Semester ${existingEnrollment.currentSemester} · Status: ${existingEnrollment.status}`}
+        >
+          <p className="text-sm text-slate-600 mb-4">
+            You are already enrolled. To view your courses and academic progress, go to your dashboard.
+          </p>
+          <Link to="/student" className="btn btn-primary">
+            Go to dashboard
+          </Link>
+        </ContentCard>
+      </StudentLayout>
+    );
+  }
+
   return (
     <StudentLayout isLoading={isLoading}>
       <PageHeader
         title="Enroll in Program"
-        subtitle="Semester 1 is assigned automatically after enrollment."
+        subtitle="Choose one program — enrollment is permanent for your academic record."
       />
 
       <ContentCard

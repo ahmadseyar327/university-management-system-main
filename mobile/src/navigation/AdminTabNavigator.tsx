@@ -44,14 +44,11 @@ export default function AdminTabNavigator() {
         headerShown: true,
         headerTitleAlign: "center",
         ...drawerScreenOptions("admin"),
-        headerLeft: () => {
-          const canGoBack = navigation.canGoBack();
-          return (
-            <Pressable style={styles.headerButton} onPress={() => (canGoBack ? navigation.goBack() : navigation.toggleDrawer())}>
-              <Ionicons name={canGoBack ? "arrow-back" : "menu"} size={24} color={colors.text} />
-            </Pressable>
-          );
-        },
+        headerLeft: () => (
+          <Pressable style={styles.headerButton} onPress={() => navigation.toggleDrawer()}>
+            <Ionicons name="menu" size={24} color={colors.text} />
+          </Pressable>
+        ),
         drawerIcon: ({ color, size }) => (
           <Ionicons name={adminIcon(route.name as keyof AdminTabParamList)} color={color} size={size} />
         ),

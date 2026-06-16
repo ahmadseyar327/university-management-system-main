@@ -28,7 +28,7 @@ export default function Student() {
 
   const quickLinks = [
     { label: 'My Courses', path: '/student/courses' },
-    { label: 'Enroll in Program', path: '/student/enroll' },
+    ...(!dashboard ? [{ label: 'Enroll in Program', path: '/student/enroll' }] : []),
     { label: 'View Attendance', path: '/student/attendance' },
     { label: 'View Marks', path: '/student/marks' },
   ];
