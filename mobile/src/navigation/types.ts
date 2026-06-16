@@ -18,6 +18,8 @@ export type InstructorTabParamList = {
 
 export type AdminTabParamList = {
   AdminOverview: undefined;
+  AdminPrograms: undefined;
+  AdminSemester: undefined;
   AdminInstructors: undefined;
   AdminOfferRequests: undefined;
   AdminRegInstructor: undefined;

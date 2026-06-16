@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import React from "react";
+import { Pressable, StyleSheet } from "react-native";
 import { PortalDrawerContent } from "../components";
 import { useAuth } from "../contexts/AuthContext";
 import InstructorAttendanceScreen from "../screens/InstructorAttendanceScreen";
@@ -10,6 +11,7 @@ import InstructorMarksScreen from "../screens/InstructorMarksScreen";
 import InstructorSettingsScreen from "../screens/InstructorSettingsScreen";
 import InstructorStudentsScreen from "../screens/InstructorStudentsScreen";
 import type { InstructorTabParamList, RootStackParamList } from "./types";
+import { colors } from "../theme";
 import { drawerScreenOptions } from "./drawerTheme";
 
 const Drawer = createDrawerNavigator<InstructorTabParamList>();
@@ -32,6 +34,22 @@ export default function InstructorTabNavigator() {
   return (
     <Drawer.Navigator
       defaultStatus="closed"
+      screenOptions={({ route, navigation }) => ({
+        headerShown: true,
+        headerTitleAlign: "center",
+        ...drawerScreenOptions("instructor"),
+        headerLeft: () => {
+          const canGoBack = navigation.canGoBack();
+          return (
+            <Pressable style={styles.headerButton} onPress={() => (canGoBack ? navigation.goBack() : navigation.toggleDrawer())}>
+              <Ionicons name={canGoBack ? "arrow-back" : "menu"} size={24} color={colors.text} />
+            </Pressable>
+          );
+        },
+        drawerIcon: ({ color, size }) => (
+          <Ionicons name={instructorIcon(route.name as keyof InstructorTabParamList)} color={color} size={size} />
+        ),
+      })}
       drawerContent={(props) => (
         <PortalDrawerContent
           {...props}
@@ -44,12 +62,6 @@ export default function InstructorTabNavigator() {
           }}
         />
       )}
-      screenOptions={({ route }) => ({
-        ...drawerScreenOptions("instructor"),
-        drawerIcon: ({ color, size }) => (
-          <Ionicons name={instructorIcon(route.name as keyof InstructorTabParamList)} color={color} size={size} />
-        ),
-      })}
     >
       <Drawer.Screen name="InstructorOverview" component={InstructorHomeScreen} options={{ title: "Dashboard" }} />
       <Drawer.Screen name="InstructorCourses" component={InstructorCoursesScreen} options={{ title: "Courses" }} />
@@ -60,3 +72,7 @@ export default function InstructorTabNavigator() {
     </Drawer.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  headerButton: { marginLeft: 16 },
+});

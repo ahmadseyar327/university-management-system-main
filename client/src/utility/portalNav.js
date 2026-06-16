@@ -55,8 +55,7 @@ const icon = {
 export const instructorNavItems = [
   { label: 'Dashboard', path: '/instructor', icon: icon.home, exact: true },
   { label: 'Students', path: '/instructor/students', icon: icon.students },
-  { label: 'Post Marks', path: '/instructor/marks/post', icon: icon.postMarks },
-  { label: 'View Marks', path: '/instructor/marks/view-or-update', icon: icon.marks },
+  { label: 'Semester Marks', path: '/instructor/marks/post', icon: icon.postMarks },
   { label: 'Attendance', path: '/instructor/attendance', icon: icon.attendance },
   { label: 'Courses', path: '/instructor/courses', icon: icon.courses },
   { label: 'Settings', path: '/instructor/settings', icon: icon.settings },
@@ -65,7 +64,7 @@ export const instructorNavItems = [
 export const studentNavItems = [
   { label: 'Dashboard', path: '/student', icon: icon.home, exact: true },
   { label: 'My Courses', path: '/student/courses', icon: icon.courses },
-  { label: 'Register Course', path: '/student/register/course', icon: icon.register },
+  { label: 'Enroll in Program', path: '/student/enroll', icon: icon.register },
   { label: 'Attendance', path: '/student/attendance', icon: icon.attendance },
   { label: 'Marks', path: '/student/marks', icon: icon.marks },
   { label: 'Settings', path: '/student/settings', icon: icon.settings },
@@ -73,10 +72,10 @@ export const studentNavItems = [
 
 export const adminNavItems = [
   { label: 'Dashboard', path: '/admin', icon: icon.home, exact: true },
+  { label: 'Programs', path: '/admin/programs', icon: icon.courses },
+  { label: 'Semester Lifecycle', path: '/admin/semester', icon: icon.marks },
   { label: 'Register Instructor', path: '/admin/instructors/register', icon: icon.register },
   { label: 'Instructors', path: '/admin/instructors/action', icon: icon.instructors },
-  { label: 'Register Course', path: '/admin/courses/register', icon: icon.register },
-  { label: 'Courses', path: '/admin/courses/action', icon: icon.courses },
-  { label: 'Offer Courses', path: '/admin/courses/assign', icon: icon.requests },
+  { label: 'Offer Semester Courses', path: '/admin/offers', icon: icon.requests },
   { label: 'Settings', path: '/admin/settings', icon: icon.settings },
 ];

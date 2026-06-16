@@ -3,6 +3,7 @@ import StudentLayout from '../../layouts/StudentLayout';
 import PageHeader from '../../components/instructor/PageHeader';
 import ContentCard from '../../components/instructor/ContentCard';
 import { fetchResponse } from '../../api/service';
+import { academicEndpoints } from '../../api/endpoints/academicEndpoints';
 import { studentEndpoints } from '../../api/endpoints/studentEndpoints';
 import { toast } from 'react-toastify';
 import { toastErrorObject } from '../../utility/toasts';
@@ -33,18 +34,27 @@ export default function Attendance() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchCourseAndExamTypeNames() {
+    async function fetchSemesterCourses() {
       try {
         const res = await fetchResponse(
-          studentEndpoints.getCourseAndExamTypeNames(studentId),
+          academicEndpoints.getStudentDashboard(studentId),
           0,
           null
         );
         if (!res.success) {
-          toast.error(res.message, toastErrorObject);
+          if (!String(res.message ?? '').toLowerCase().includes('not enrolled')) {
+            toast.error(res.message, toastErrorObject);
+          }
+          setCourses([]);
           return;
         }
-        setCourses(res.data?.courses);
+        setCourses(
+          (res.data?.courses ?? []).map((course) => ({
+            courseId: course.id,
+            title: course.name,
+            instructor: '—',
+          }))
+        );
       } catch (error) {
         console.log(error);
       } finally {
@@ -52,7 +62,7 @@ export default function Attendance() {
       }
     }
     setIsLoading(true);
-    fetchCourseAndExamTypeNames();
+    fetchSemesterCourses();
   }, [studentId]);
 
   async function handleFetchAttendances(courseId) {

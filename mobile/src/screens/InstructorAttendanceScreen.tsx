@@ -143,7 +143,7 @@ function AttendanceRow({
   );
 }
 
-export default function InstructorAttendanceScreen(_props: Props) {
+export default function InstructorAttendanceScreen({ navigation }: Props) {
   const { instructorData } = useAuth();
   const instructorId = mongoId(instructorData);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));

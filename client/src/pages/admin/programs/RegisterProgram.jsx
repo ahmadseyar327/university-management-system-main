@@ -9,9 +9,11 @@ import { toast } from 'react-toastify';
 import { toastErrorObject, toastSuccessObject } from '../../../utility/toasts';
 import InputField from '../../../components/inputs/InputField';
 import PrimaryButton from '../../../components/ui/PrimaryButton';
+import { useAuth } from '../../../contexts/authContext';
 
 export default function RegisterProgram() {
   const navigate = useNavigate();
+  const { adminData } = useAuth();
   const [form, setForm] = useState({ name: '', description: '' });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -26,6 +28,7 @@ export default function RegisterProgram() {
       const res = await fetchResponse(programEndpoints.registerProgram(), 1, {
         name: form.name,
         description: form.description,
+        adminId: adminData?._id,
       });
       if (!res?.success) {
         toast.error(res?.message ?? 'Could not create program', toastErrorObject);

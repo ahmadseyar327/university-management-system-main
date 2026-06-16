@@ -1,7 +1,7 @@
 import type { DrawerScreenProps } from "@react-navigation/drawer";
 import React, { useCallback, useEffect, useState } from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
-import { studentEndpoints } from "../api/endpoints";
+import { academicEndpoints, studentEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
 import {
   EmptyState,
@@ -34,7 +34,7 @@ function statusStyles(raw: string) {
   return { bg: colors.borderLight, fg: colors.textSecondary, border: colors.border, label: raw || "—" };
 }
 
-export default function StudentAttendanceScreen(_props: Props) {
+export default function StudentAttendanceScreen({ navigation }: Props) {
   const { studentData } = useAuth();
   const studentId = mongoId(studentData);
   const [courses, setCourses] = useState<CourseOpt[]>([]);
@@ -47,15 +47,21 @@ export default function StudentAttendanceScreen(_props: Props) {
     let cancelled = false;
     (async () => {
       setLoadingMeta(true);
-      const res = await fetchResponse(studentEndpoints.getCourseAndExamTypeNames(studentId), 0, null);
+      const res = await fetchResponse(academicEndpoints.getStudentDashboard(studentId), 0, null);
       if (!res?.success) {
-        if (!String(res?.message ?? "").toLowerCase().includes("not found")) {
+        if (!String(res?.message ?? "").toLowerCase().includes("not enrolled")) {
           toastError(res?.message ?? "Could not load courses");
         }
         setCourses([]);
       } else {
-        const data = res.data as { courses?: CourseOpt[] };
-        setCourses(data?.courses ?? []);
+        const data = res.data as { courses?: { id?: string; name?: string; code?: string }[] };
+        setCourses(
+          (data?.courses ?? []).map((c) => ({
+            courseId: String(c.id ?? ""),
+            title: `${c.name ?? "Course"} (${c.code ?? ""})`,
+            instructor: "—",
+          }))
+        );
       }
       if (!cancelled) setLoadingMeta(false);
     })();
@@ -111,7 +117,7 @@ export default function StudentAttendanceScreen(_props: Props) {
 
   return (
     <ScreenContainer>
-      <ScreenHeader title="My attendance" subtitle="Session history for each course." />
+      <ScreenHeader title="My attendance" subtitle="Session history for each course." onBack={() => navigation.goBack()} />
 
       <FadeInView>
         <View style={[styles.panel, shadow.soft]}>

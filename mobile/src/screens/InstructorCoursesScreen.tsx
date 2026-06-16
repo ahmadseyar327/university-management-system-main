@@ -33,7 +33,7 @@ function titleOf(row: OfferedRow) {
   return String(row.title ?? "Untitled course");
 }
 
-export default function InstructorCoursesScreen(_props: Props) {
+export default function InstructorCoursesScreen({ navigation }: Props) {
   const { instructorData } = useAuth();
   const instructorId = mongoId(instructorData);
   const [courses, setCourses] = useState<OfferedRow[]>([]);
@@ -113,19 +113,21 @@ export default function InstructorCoursesScreen(_props: Props) {
     <ScreenContainer>
       <ScreenHeader
         title="My courses"
-        subtitle="Accept admin offers, then view your active teaching assignments."
+        subtitle="Accept semester course offers from the administrator."
+        onBack={() => navigation.goBack()}
       />
 
       {pending.length > 0 ? (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Course offers</Text>
+          <Text style={styles.sectionTitle}>Semester course offers</Text>
           {pending.map((item) => {
             const id = String(item.requestId ?? "");
             return (
               <View key={id} style={[styles.offerCard, shadow.soft]}>
                 <Text style={styles.offerTitle}>{titleOf(item)}</Text>
                 <Text style={styles.offerSub}>
-                  {String(item.code ?? "")} � {String(item.creditHours ?? "")} credits
+                  {String(item.code ?? "")} · Sem {String(item.semesterNumber ?? "—")}
+                  {item.programName ? ` · ${String(item.programName)}` : ""}
                 </Text>
                 <View style={styles.offerActions}>
                   <Pressable
@@ -174,7 +176,7 @@ export default function InstructorCoursesScreen(_props: Props) {
             message={
               pending.length
                 ? "Accept a course offer above to get started."
-                : "An administrator will send you course offers."
+                : "An administrator will offer you semester courses."
             }
           />
         }
@@ -183,7 +185,10 @@ export default function InstructorCoursesScreen(_props: Props) {
           <View style={listStyles.row}>
             <View style={{ flex: 1 }}>
               <Text style={listStyles.rowName}>{titleOf(item)}</Text>
-              <Text style={styles.codeTag}>{String(item.code ?? "")}</Text>
+              <Text style={styles.codeTag}>
+                {String(item.code ?? "")}
+                {item.programName ? ` · ${String(item.programName)} Sem ${String(item.semesterNumber ?? "")}` : ""}
+              </Text>
             </View>
             <Ionicons name="checkmark-circle" size={22} color={colors.instructor} />
           </View>

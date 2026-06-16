@@ -1,27 +1,89 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import moment from 'moment';
 import StudentLayout from '../../layouts/StudentLayout';
 import PageHeader from '../../components/instructor/PageHeader';
 import ContentCard from '../../components/instructor/ContentCard';
 import { useAuth } from '../../contexts/authContext';
+import { fetchResponse } from '../../api/service';
+import { academicEndpoints } from '../../api/endpoints/academicEndpoints';
+import PrimaryButton from '../../components/ui/PrimaryButton';
+import { toastErrorObject, toastSuccessObject } from '../../utility/toasts';
+import { toast } from 'react-toastify';
 
 export default function Student() {
   const { studentData } = useAuth();
+  const studentId = studentData?._id;
+  const [dashboard, setDashboard] = useState(null);
+  const [promoting, setPromoting] = useState(false);
+
+  useEffect(() => {
+    if (!studentId) return;
+    async function load() {
+      const res = await fetchResponse(academicEndpoints.getStudentDashboard(studentId), 0, null);
+      if (res?.success) setDashboard(res.data);
+    }
+    void load();
+  }, [studentId]);
 
   const quickLinks = [
     { label: 'My Courses', path: '/student/courses' },
-    { label: 'Register Course', path: '/student/register/course' },
+    { label: 'Enroll in Program', path: '/student/enroll' },
     { label: 'View Attendance', path: '/student/attendance' },
     { label: 'View Marks', path: '/student/marks' },
   ];
+
+  async function confirmPromotion() {
+    if (!window.confirm('Confirm promotion to the next semester?')) return;
+    setPromoting(true);
+    try {
+      const res = await fetchResponse(academicEndpoints.studentConfirmPromotion(), 1, { studentId });
+      if (!res?.success) {
+        toast.error(res?.message ?? 'Promotion failed', toastErrorObject);
+        return;
+      }
+      toast.success(res.message ?? 'Promoted', toastSuccessObject);
+      const dash = await fetchResponse(academicEndpoints.getStudentDashboard(studentId), 0, null);
+      if (dash?.success) setDashboard(dash.data);
+    } finally {
+      setPromoting(false);
+    }
+  }
+
+  const showPromotion =
+    dashboard?.status === 'Ready For Registration' &&
+    dashboard?.registrationOpen &&
+    dashboard?.promotionStatus === 'PASSED SEMESTER';
 
   return (
     <StudentLayout>
       <PageHeader
         title={`Welcome, ${studentData?.fname}`}
-        subtitle="Access your courses, attendance, and academic records."
+        subtitle="Your semester dashboard and academic records."
       />
+
+      {dashboard ? (
+        <ContentCard
+          title={`${dashboard.program?.name ?? 'Program'} · Semester ${dashboard.currentSemester}`}
+          subtitle={`${dashboard.semesterTitle ?? ''} · Status: ${dashboard.status}`}
+          className="mb-4"
+        >
+          <p className="text-sm text-slate-600 mb-2">
+            Semester result: {dashboard.promotionStatus ?? 'PENDING'} · Courses: {dashboard.courses?.length ?? 0}
+          </p>
+          {showPromotion ? (
+            <PrimaryButton onClick={() => void confirmPromotion()} disabled={promoting}>
+              {promoting ? 'Promoting…' : 'Confirm promotion to next semester'}
+            </PrimaryButton>
+          ) : null}
+        </ContentCard>
+      ) : (
+        <ContentCard title="Get started" subtitle="Enroll in a program to begin semester 1." className="mb-4">
+          <Link to="/student/enroll" className="btn btn-primary">
+            Enroll in program
+          </Link>
+        </ContentCard>
+      )}
 
       <div className="inst-stat-grid">
         <div className="inst-stat-card">

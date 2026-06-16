@@ -12,8 +12,6 @@ import StudentSignup from "./pages/student/StudentSignup";
 import AdminLogin from "./pages/admin/AdminLogin";
 import ViewAndActionInstructor from "./pages/admin/instructor/ViewAndActionInstructor";
 import RegisterInstructor from "./pages/admin/instructor/RegisterInstructor";
-import ViewAndActionCourse from "./pages/admin/course/ViewAndActionCourse";
-import RegisterCourse from "./pages/admin/course/RegisterCourse";
 import OfferRequests from "./pages/admin/course/OfferRequests";
 import AdminSettings from "./pages/admin/AdminSettings";
 import { useAuth } from "./contexts/authContext";
@@ -24,12 +22,16 @@ import PostAttendance from "./pages/instructor/attendance/PostAttendance";
 import PostMarks from "./pages/instructor/marks/PostMarks";
 import InstructorStudents from "./pages/instructor/InstructorStudents";
 import Courses from "./pages/student/Courses";
-import RegisterCourseStudent from "./pages/student/RegisterCourse";
 import StudentSettings from "./pages/student/StudentSettings";
 import Marks from "./pages/student/Marks";
 import Attendance from "./pages/student/Attendance";
 import ViewMarks from "./pages/instructor/marks/ViewMarks";
 import Activator from "./Activator";
+import Programs from "./pages/admin/programs/Programs";
+import RegisterProgram from "./pages/admin/programs/RegisterProgram";
+import ProgramDetails from "./pages/admin/programs/ProgramDetails";
+import SemesterManagement from "./pages/admin/semester/SemesterManagement";
+import EnrollProgram from "./pages/student/EnrollProgram";
 
 export default function App() {
   const { studentData, instructorData, adminData } = useAuth();
@@ -83,8 +85,12 @@ export default function App() {
             element={studentData ? <Courses /> : <StudentLogin />}
           />
           <Route
-            path="student/register/course"
-            element={studentData ? <RegisterCourseStudent /> : <StudentLogin />}
+            path="/student/register/course"
+            element={<Navigate to="/student/enroll" replace />}
+          />
+          <Route
+            path="/student/enroll"
+            element={studentData ? <EnrollProgram /> : <StudentLogin />}
           />
           <Route
             path="/student/attendance"
@@ -116,23 +122,43 @@ export default function App() {
           />
           <Route
             path="/admin/courses/action"
-            element={adminData ? <ViewAndActionCourse /> : <AdminLogin />}
+            element={<Navigate to="/admin/programs" replace />}
           />
           <Route
             path="/admin/courses/assign"
+            element={<Navigate to="/admin/offers" replace />}
+          />
+          <Route
+            path="/admin/offers"
             element={adminData ? <OfferRequests /> : <AdminLogin />}
           />
           <Route
             path="/admin/courses/offer-requests"
-            element={<Navigate to="/admin/courses/assign" replace />}
+            element={<Navigate to="/admin/offers" replace />}
           />
           <Route
             path="/admin/courses/register"
-            element={adminData ? <RegisterCourse /> : <AdminLogin />}
+            element={<Navigate to="/admin/programs" replace />}
           />
           <Route
             path="/admin/settings"
             element={adminData ? <AdminSettings /> : <AdminLogin />}
+          />
+          <Route
+            path="/admin/programs"
+            element={adminData ? <Programs /> : <AdminLogin />}
+          />
+          <Route
+            path="/admin/programs/register"
+            element={adminData ? <RegisterProgram /> : <AdminLogin />}
+          />
+          <Route
+            path="/admin/programs/:id"
+            element={adminData ? <ProgramDetails /> : <AdminLogin />}
+          />
+          <Route
+            path="/admin/semester"
+            element={adminData ? <SemesterManagement /> : <AdminLogin />}
           />
           <Route path="/admin/login" element={<AdminLogin />} />
           

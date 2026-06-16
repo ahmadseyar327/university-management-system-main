@@ -10,11 +10,13 @@ import { toastErrorObject, toastSuccessObject } from '../../../utility/toasts';
 import InputField from '../../../components/inputs/InputField';
 import SelectField from '../../../components/inputs/SelectField';
 import PrimaryButton from '../../../components/ui/PrimaryButton';
+import { useAuth } from '../../../contexts/authContext';
 import DynamicTable from '../../../components/tables/DynamicTable';
 
 export default function ProgramDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { adminData } = useAuth();
   const [program, setProgram] = useState(null);
   const [semesters, setSemesters] = useState([]);
   const [selectedSemesterId, setSelectedSemesterId] = useState('');
@@ -130,6 +132,15 @@ export default function ProgramDetails() {
       toast.error('Course title and code are required.', toastErrorObject);
       return;
     }
+    if (!courseForm.fee || !courseForm.creditHours) {
+      toast.error('Fee and credit hours are required.', toastErrorObject);
+      return;
+    }
+    const adminId = adminData?._id || program?.adminId;
+    if (!adminId) {
+      toast.error('Admin session missing. Please log in again.', toastErrorObject);
+      return;
+    }
     setIsLoading(true);
     try {
       const res = await fetchResponse(programEndpoints.addCourseToSemester(), 1, {
@@ -140,7 +151,7 @@ export default function ProgramDetails() {
         fee: Number(courseForm.fee),
         creditHours: Number(courseForm.creditHours),
         type: courseForm.type,
-        adminId: program?.adminId ?? '',
+        adminId,
       });
       if (!res?.success) {
         toast.error(res?.message ?? 'Could not add course', toastErrorObject);

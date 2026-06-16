@@ -1,31 +1,26 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import InstructorLayout from '../../../layouts/InstructorLayout';
 import PageHeader from '../../../components/instructor/PageHeader';
 import ContentCard from '../../../components/instructor/ContentCard';
 import { fetchResponse } from '../../../api/service';
 import { toast } from 'react-toastify';
-import { toastErrorObject } from '../../../utility/toasts';
+import { toastErrorObject, toastSuccessObject } from '../../../utility/toasts';
 import { courseEndpoints } from '../../../api/endpoints/courseEndpoints';
+import { academicEndpoints } from '../../../api/endpoints/academicEndpoints';
 import SelectField from '../../../components/inputs/SelectField';
-import MarkMarks from './MarkMarks';
-import InputField from '../../../components/inputs/InputField';
-import { examTypes } from '../../../utility/constants';
+import PrimaryButton from '../../../components/instructor/PrimaryButton';
 import AcademicsFilterPanel from '../../../components/academics/AcademicsFilterPanel';
 import FadeInPanel from '../../../components/academics/FadeInPanel';
 
 export default function PostMarks() {
   const instructorId = JSON.parse(localStorage.getItem('instructor'))._id;
-  const uniqueCourseIds = {};
-
-  const [studentsMarks, setStudentsMarks] = useState([]);
-  const [temporarySelection, setTemporarySelection] = useState({
-    course: '',
-    examType: '',
-    activityNumber: '',
-    totalMarks: '',
-    weightage: '',
-  });
+  const [students, setStudents] = useState([]);
+  const [courseId, setCourseId] = useState('');
+  const [programId, setProgramId] = useState('');
+  const [semesterNumber, setSemesterNumber] = useState('');
+  const [rows, setRows] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     async function fetchStudents() {
@@ -37,156 +32,190 @@ export default function PostMarks() {
         );
         if (!res.success) {
           toast.error(res.message, toastErrorObject);
-          setIsLoading(false);
+          setStudents([]);
           return;
         }
-        const sortedStudents = res.data?.sort((a, b) => {
-          const fnameComparison = a.fname.localeCompare(b.fname);
-          if (fnameComparison !== 0) return fnameComparison;
-          return a.lname.localeCompare(b.lname);
-        });
-        setStudentsMarks(
-          sortedStudents.map((student) => ({
-            ...student,
-            studentId: student._id,
-            name: student.fname + ' ' + student.lname,
-            obtainedMarks: 0,
-            isPublic: true,
-          }))
-        );
-        setIsLoading(false);
+        setStudents(res.data ?? []);
       } catch (error) {
-        console.log(error);
+        console.error(error);
+      } finally {
         setIsLoading(false);
       }
     }
-    fetchStudents();
+    void fetchStudents();
   }, [instructorId]);
 
-  const courseOptions = studentsMarks
-    .filter((marks) => {
-      const courseId = marks.courseId;
-      if (!uniqueCourseIds[courseId]) {
-        uniqueCourseIds[courseId] = true;
+  const courseOptions = useMemo(() => {
+    const seen = new Set();
+    return students
+      .filter((s) => {
+        if (!s.courseId || seen.has(s.courseId)) return false;
+        seen.add(s.courseId);
         return true;
-      }
-      return false;
-    })
-    .sort((a, b) => a.courseTitle.localeCompare(b.courseTitle))
-    .map((marks) => ({
-      value: marks.courseId,
-      title: marks.courseTitle,
-    }));
+      })
+      .sort((a, b) => String(a.courseTitle).localeCompare(String(b.courseTitle)))
+      .map((s) => ({ value: s.courseId, title: s.courseTitle }));
+  }, [students]);
 
-  const filteredStudents = studentsMarks.filter(
-    (s) => s.courseId === temporarySelection.course
-  );
+  useEffect(() => {
+    if (!courseId) {
+      setRows([]);
+      return;
+    }
+    const sample = students.find((s) => s.courseId === courseId);
+    const prog = sample?.programId ?? '';
+    const sem = sample?.semesterNumber ?? '';
+    setProgramId(prog);
+    setSemesterNumber(String(sem ?? ''));
+
+    async function loadMarks() {
+      if (!prog || !sem) {
+        const filtered = students
+          .filter((s) => s.courseId === courseId)
+          .map((s) => ({
+            studentId: s._id,
+            rollNumber: s.rollNumber,
+            name: `${s.fname} ${s.lname}`,
+            midExamMarks: 0,
+            finalExamMarks: 0,
+          }));
+        setRows(filtered);
+        return;
+      }
+      setIsLoading(true);
+      try {
+        const res = await fetchResponse(
+          academicEndpoints.getCourseResultsForInstructor(instructorId, courseId, sem),
+          0,
+          null
+        );
+        if (res?.success) {
+          setRows(res.data ?? []);
+        } else {
+          const filtered = students
+            .filter((s) => s.courseId === courseId)
+            .map((s) => ({
+              studentId: s._id,
+              rollNumber: s.rollNumber,
+              name: `${s.fname} ${s.lname}`,
+              midExamMarks: 0,
+              finalExamMarks: 0,
+            }));
+          setRows(filtered);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    void loadMarks();
+  }, [courseId, instructorId, students]);
+
+  async function saveAll() {
+    if (!courseId || !programId || !semesterNumber) {
+      toast.error('Course must belong to a semester program enrollment.', toastErrorObject);
+      return;
+    }
+    setSaving(true);
+    try {
+      for (const row of rows) {
+        const res = await fetchResponse(academicEndpoints.saveCourseResult(), 1, {
+          studentId: row.studentId,
+          courseId,
+          instructorId,
+          programId,
+          semesterNumber: Number(semesterNumber),
+          midExamMarks: Number(row.midExamMarks) || 0,
+          finalExamMarks: Number(row.finalExamMarks) || 0,
+        });
+        if (!res?.success) {
+          toast.error(res?.message ?? 'Could not save marks', toastErrorObject);
+          return;
+        }
+      }
+      toast.success('Marks saved for all students.', toastSuccessObject);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function updateRow(index, field, value) {
+    setRows((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  }
 
   return (
     <InstructorLayout isLoading={isLoading}>
       <PageHeader
-        title="Post Marks"
-        subtitle="Set up the assessment, then grade each student in a simple card view."
+        title="Semester Marks"
+        subtitle="Enter mid exam (max 20) and final exam (max 80) marks per student."
       />
 
       <div className="academics-layout-split">
         <FadeInPanel>
-          <AcademicsFilterPanel
-            step="1"
-            title="Assessment setup"
-            subtitle="Choose course and exam details"
-          >
-            <div className="inst-filter-grid">
-              <SelectField
-                variant="instructor"
-                label="Course"
-                options={courseOptions}
-                value={temporarySelection.course}
-                onChange={(event) =>
-                  setTemporarySelection({
-                    ...temporarySelection,
-                    course: event.target.value,
-                  })
-                }
-              />
-              <SelectField
-                variant="instructor"
-                label="Exam Type"
-                options={examTypes?.map((exam) => ({ value: exam, title: exam }))}
-                value={temporarySelection.examType}
-                onChange={(event) =>
-                  setTemporarySelection({
-                    ...temporarySelection,
-                    examType: event.target.value,
-                  })
-                }
-              />
-              <InputField
-                variant="instructor"
-                label="Activity Number"
-                type="number"
-                value={temporarySelection.activityNumber}
-                onChange={(event) =>
-                  setTemporarySelection({
-                    ...temporarySelection,
-                    activityNumber: event.target.value,
-                  })
-                }
-                required={true}
-                min={1}
-              />
-              <InputField
-                variant="instructor"
-                label="Total Marks"
-                type="number"
-                value={temporarySelection.totalMarks}
-                onChange={(event) =>
-                  setTemporarySelection({
-                    ...temporarySelection,
-                    totalMarks: event.target.value,
-                  })
-                }
-                required={true}
-                min={1}
-              />
-              <InputField
-                variant="instructor"
-                label="Weightage"
-                type="number"
-                value={temporarySelection.weightage}
-                onChange={(event) =>
-                  setTemporarySelection({
-                    ...temporarySelection,
-                    weightage: event.target.value,
-                  })
-                }
-                required={true}
-                min={0}
-              />
-            </div>
+          <AcademicsFilterPanel step="1" title="Course" subtitle="Select a course to grade">
+            <SelectField
+              variant="instructor"
+              label="Course"
+              options={courseOptions}
+              value={courseId}
+              onChange={(e) => setCourseId(e.target.value)}
+            />
+            {semesterNumber ? (
+              <div className="academics-session-banner mt-3">
+                Semester {semesterNumber} · Pass threshold 55/100
+              </div>
+            ) : null}
           </AcademicsFilterPanel>
         </FadeInPanel>
 
         <FadeInPanel delay={80}>
           <ContentCard
-            title="Grade students"
-            subtitle={
-              filteredStudents.length
-                ? `${filteredStudents.length} students in this course`
-                : 'Select a course to begin'
-            }
+            title="Student marks"
+            subtitle={rows.length ? `${rows.length} students` : 'Select a course'}
           >
-            <MarkMarks
-              data={filteredStudents}
-              setData={setStudentsMarks}
-              courseId={temporarySelection.course}
-              instructorId={instructorId}
-              setIsLoading={setIsLoading}
-              examType={temporarySelection.examType}
-              activityNumber={temporarySelection.activityNumber}
-              weightage={temporarySelection.weightage}
-              totalMarks={temporarySelection.totalMarks}
-            />
+            {!courseId ? (
+              <p className="academics-empty-state">Choose a course to load students.</p>
+            ) : (
+              <>
+                {rows.map((row, index) => (
+                  <div key={row.studentId} className="academics-student-mark-row">
+                    <span className="academics-student-mark-activity">{row.rollNumber}</span>
+                    <div>
+                      <p className="academics-student-mark-meta">{row.name}</p>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                      <input
+                        className="academics-mark-input"
+                        type="number"
+                        min={0}
+                        max={20}
+                        placeholder="Mid"
+                        value={row.midExamMarks ?? ''}
+                        onChange={(e) => updateRow(index, 'midExamMarks', e.target.value)}
+                      />
+                      <input
+                        className="academics-mark-input"
+                        type="number"
+                        min={0}
+                        max={80}
+                        placeholder="Final"
+                        value={row.finalExamMarks ?? ''}
+                        onChange={(e) => updateRow(index, 'finalExamMarks', e.target.value)}
+                      />
+                      <span className="academics-student-mark-score">
+                        {(Number(row.midExamMarks) || 0) + (Number(row.finalExamMarks) || 0)}/100
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                <PrimaryButton className="w-full mt-4" onClick={() => void saveAll()} disabled={saving}>
+                  {saving ? 'Saving…' : 'Save marks'}
+                </PrimaryButton>
+              </>
+            )}
           </ContentCard>
         </FadeInPanel>
       </div>

@@ -10,6 +10,15 @@ const offeredCourseSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    programId: {
+      type: String,
+      default: '',
+    },
+    semesterNumber: {
+      type: Number,
+      min: 1,
+      max: 8,
+    },
     status: {
       type: String,
       enum: ["pending", "approved", "declined"],

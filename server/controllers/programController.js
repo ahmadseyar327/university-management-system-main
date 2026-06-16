@@ -145,6 +145,23 @@ const addCourseToSemester = async (req, res) => {
       });
     }
 
+    const resolvedAdminId = String(adminId || '').trim();
+    if (!resolvedAdminId) {
+      return res.status(400).send({
+        success: false,
+        message: 'adminId is required. Please sign in again as admin.',
+      });
+    }
+
+    const parsedFee = Number(fee);
+    const parsedCreditHours = Number(creditHours);
+    if (Number.isNaN(parsedFee) || parsedFee < 0) {
+      return res.status(400).send({ success: false, message: 'Valid fee is required.' });
+    }
+    if (Number.isNaN(parsedCreditHours) || parsedCreditHours < 1) {
+      return res.status(400).send({ success: false, message: 'Valid credit hours are required.' });
+    }
+
     const semester = await semesterSchema.findById(semesterId);
     if (!semester) {
       return res.status(404).send({ success: false, message: 'Semester not found.' });
@@ -160,9 +177,9 @@ const addCourseToSemester = async (req, res) => {
       code: code.trim(),
       description: description || '',
       type: type || 'Core',
-      fee: fee ?? 0,
-      creditHours: creditHours ?? 3,
-      adminId: adminId || '',
+      fee: parsedFee,
+      creditHours: parsedCreditHours,
+      adminId: resolvedAdminId,
       semesterId: semester._id.toString(),
     });
 
@@ -176,7 +193,8 @@ const addCourseToSemester = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).send({ success: false, message: 'Could not add course.', error });
+    const message = error?.message || 'Could not add course.';
+    res.status(500).send({ success: false, message, error: error?.errors || error });
   }
 };
 

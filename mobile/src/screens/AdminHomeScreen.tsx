@@ -38,10 +38,12 @@ export default function AdminHomeScreen({ navigation }: Props) {
       </View>
 
       <View style={styles.actions}>
-        <QuickActionCard icon="people-outline" label="Instructors" onPress={() => navigation.navigate("AdminInstructors")} delay={160} />
+        <QuickActionCard icon="school-outline" label="Programs" onPress={() => navigation.navigate("AdminPrograms")} delay={140} />
+        <QuickActionCard icon="calendar-outline" label="Semester" onPress={() => navigation.navigate("AdminSemester")} delay={160} />
+        <QuickActionCard icon="people-outline" label="Instructors" onPress={() => navigation.navigate("AdminInstructors")} delay={180} />
         <QuickActionCard icon="notifications-outline" label="Offers" onPress={() => navigation.navigate("AdminOfferRequests")} delay={200} />
-        <QuickActionCard icon="library-outline" label="Courses" onPress={() => navigation.navigate("AdminCourses")} delay={240} />
-        <QuickActionCard icon="person-add-outline" label="Register" onPress={() => navigation.navigate("AdminRegInstructor")} delay={280} />
+        <QuickActionCard icon="library-outline" label="Courses" onPress={() => navigation.navigate("AdminCourses")} delay={220} />
+        <QuickActionCard icon="person-add-outline" label="Register" onPress={() => navigation.navigate("AdminRegInstructor")} delay={240} />
       </View>
     </ScreenContainer>
   );

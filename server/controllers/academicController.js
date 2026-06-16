@@ -15,6 +15,7 @@ const {
   openSemesterRegistration,
   closeSemesterRegistration,
   confirmStudentPromotion,
+  handleFailedSemester,
 } = require('../services/semesterPromotionService');
 const { SEMESTER_RESULT } = require('../utils/academicRules');
 
@@ -246,9 +247,108 @@ const adminListEligibleStudents = async (req, res) => {
       currentSemester: Number(semesterNumber),
       status: 'Ready For Registration',
     });
-    res.status(200).send({ success: true, data: records });
+
+    const studentIds = records.map((r) => r.studentId);
+    const students = await studentSchema.find({ _id: { $in: studentIds } });
+
+    const merged = records.map((record) => {
+      const student = students.find((s) => s._id.toString() === record.studentId);
+      return {
+        ...record._doc,
+        rollNumber: student?.rollNumber,
+        name: student ? `${student.fname} ${student.lname}` : '',
+        email: student?.email,
+      };
+    });
+
+    res.status(200).send({ success: true, data: merged });
   } catch (error) {
     res.status(500).send({ success: false, message: 'Could not list students.', error });
+  }
+};
+
+const studentConfirmPromotion = async (req, res) => {
+  try {
+    const { studentId } = req.body;
+    const result = await confirmStudentPromotion(studentId);
+    if (!result.success) {
+      return res.status(400).send(result);
+    }
+    res.status(200).send(result);
+  } catch (error) {
+    res.status(500).send({ success: false, message: 'Promotion failed.', error });
+  }
+};
+
+const getRegistrationStatus = async (req, res) => {
+  try {
+    const { programId, targetSemester } = req.query;
+    if (!programId || !targetSemester) {
+      return res.status(400).send({ success: false, message: 'programId and targetSemester are required.' });
+    }
+    const reg = await semesterRegistrationSchema.findOne({
+      programId,
+      targetSemester: Number(targetSemester),
+    });
+    res.status(200).send({
+      success: true,
+      data: reg || { programId, targetSemester: Number(targetSemester), isOpen: false },
+    });
+  } catch (error) {
+    res.status(500).send({ success: false, message: 'Could not fetch registration status.', error });
+  }
+};
+
+const getSemesterHistory = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const record = await studentAcademicRecordSchema.findOne({ studentId });
+    if (!record) {
+      return res.status(404).send({ success: false, message: 'No academic record found.' });
+    }
+
+    const semesterResults = await semesterResultSchema.find({
+      studentId,
+      programId: record.programId,
+    }).sort({ semesterNumber: 1 });
+
+    const courseResults = await courseResultSchema.find({
+      studentId,
+      programId: record.programId,
+      isPublished: true,
+    });
+
+    const program = await programSchema.findById(record.programId);
+
+    res.status(200).send({
+      success: true,
+      data: {
+        program: program ? { id: program._id, name: program.name } : null,
+        currentSemester: record.currentSemester,
+        status: record.status,
+        semesterResults,
+        courseResults,
+      },
+    });
+  } catch (error) {
+    res.status(500).send({ success: false, message: 'Could not load history.', error });
+  }
+};
+
+const retryFailedSemester = async (req, res) => {
+  try {
+    const { studentId, programId, semesterNumber } = req.body;
+    if (!studentId || !programId || !semesterNumber) {
+      return res.status(400).send({ success: false, message: 'studentId, programId, and semesterNumber are required.' });
+    }
+    const assignment = await handleFailedSemester(studentId, programId, Number(semesterNumber));
+    res.status(200).send({
+      success: true,
+      message: 'Semester courses re-assigned for repeat.',
+      assignment,
+    });
+  } catch (error) {
+    res.status(500).send({ success: false, message: 'Retry failed.', error });
   }
 };
 
@@ -292,4 +392,8 @@ module.exports = {
   adminListEligibleStudents,
   recalculateSemester,
   updateStudentStatus,
+  studentConfirmPromotion,
+  getRegistrationStatus,
+  getSemesterHistory,
+  retryFailedSemester,
 };

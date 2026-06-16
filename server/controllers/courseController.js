@@ -3,104 +3,57 @@ const instructorSchema = require('../models/instructorModel');
 const studentSchema = require('../models/studentModel');
 const offeredCourseSchema = require('../models/offeredCourseModel');
 const registeredCourseSchema = require('../models/registeredCourseModel');
+const semesterSchema = require('../models/semesterModel');
+const programSchema = require('../models/programModel');
 
-const registerCourse = async (req, res) => {
-  try {
-    const { title, creditHours, fee, type, code, adminId } = req.body;
+async function getCourseSemesterContext(course) {
+  if (!course?.semesterId) return null;
+  const semester = await semesterSchema.findById(course.semesterId);
+  if (!semester) return null;
+  const program = await programSchema.findById(semester.programId);
+  return {
+    semesterId: semester._id.toString(),
+    semesterNumber: semester.semesterNumber,
+    semesterTitle: semester.title,
+    programId: semester.programId,
+    programName: program?.name ?? '',
+  };
+}
 
-    // validation
-    switch (true) {
-      case !title:
-        return res.status(400).send({
-          success: false,
-          message: 'Title is mandatory!',
-        });
-      case !fee:
-        return res.status(400).send({
-          success: false,
-          message: 'Fee is mandatory!',
-        });
-      case !type:
-        return res.status(400).send({
-          success: false,
-          message: 'Type is mandatory!',
-        });
-      case !code:
-        return res.status(400).send({
-          success: false,
-          message: 'Code is mandatory!',
-        });
-      case !adminId:
-        return res.status(400).send({
-          success: false,
-          message: 'Admin ID is mandatory!',
-        });
-      default:
-        break;
-    }
-
-    // ensuring uniqueness
-    const courseExists = await courseSchema.find({ title, code });
-    if (courseExists.length) {
-      return res.status(400).send({
-        success: false,
-        message: 'This course already exists.',
-      });
-    }
-
-    // registration
-    const newCourse = new courseSchema({
-      title,
-      creditHours: creditHours ? creditHours : 1,
-      fee,
-      type,
-      code,
-      adminId,
-    });
-    const result = await newCourse.save();
-
-    if (result) {
-      res.status(200).send({
-        success: true,
-        message: 'Course registered successfully!',
-        data: newCourse,
-      });
-    } else {
-      res.status(500).send({
-        success: false,
-        message: 'Something went wrong while registering the course.',
-        error,
-      });
-    }
-  } catch (error) {
-    res.status(500).send({
-      success: false,
-      message: 'Something went wrong while registering the course.',
-      error,
-    });
-  }
+const registerCourse = async (_req, res) => {
+  return res.status(400).send({
+    success: false,
+    message: 'Standalone course registration is disabled. Add courses under Admin → Programs → Semester.',
+  });
 };
 
-const getCourses = async (req, res) => {
+const getCourses = async (_req, res) => {
   try {
-    const courses = await courseSchema.find();
+    const courses = await courseSchema.find({
+      semesterId: { $exists: true, $ne: null, $ne: '' },
+    });
     if (courses.length) {
+      const detail = [];
+      for (const course of courses) {
+        const ctx = await getCourseSemesterContext(course);
+        detail.push({ ...course._doc, ...ctx });
+      }
       res.status(200).send({
         success: true,
-        message: 'Courses fetched successfully!',
-        count: courses.length,
-        data: courses,
+        message: 'Semester courses fetched successfully!',
+        count: detail.length,
+        data: detail,
       });
     } else {
       res.status(204).send({
         success: true,
-        message: 'No courses so far.',
+        message: 'No semester courses found. Add courses under a program semester first.',
       });
     }
   } catch (error) {
     res.status(500).send({
       success: false,
-      message: 'Something went wrong while fetching the courses.',
+      message: 'Something went wrong while fetching courses.',
       error,
     });
   }
@@ -286,6 +239,33 @@ const registerOfferedCourse = async (req, res) => {
       });
     }
 
+    if (!courseExists.semesterId) {
+      return res.status(400).send({
+        success: false,
+        message: 'Only semester program courses can be offered. Add the course under Admin → Programs first.',
+      });
+    }
+
+    const semesterCtx = await getCourseSemesterContext(courseExists);
+    if (!semesterCtx) {
+      return res.status(400).send({
+        success: false,
+        message: 'Could not resolve semester for this course.',
+      });
+    }
+
+    const otherApproved = await offeredCourseSchema.findOne({
+      courseId,
+      status: 'approved',
+      instructorId: { $ne: instructorId },
+    });
+    if (otherApproved) {
+      return res.status(400).send({
+        success: false,
+        message: 'This semester course already has an approved instructor.',
+      });
+    }
+
     const existing = await offeredCourseSchema.findOne({
       courseId,
       instructorId,
@@ -311,6 +291,8 @@ const registerOfferedCourse = async (req, res) => {
       instructorId,
       status: 'pending',
       reviewedByAdminId: adminId,
+      programId: semesterCtx.programId,
+      semesterNumber: semesterCtx.semesterNumber,
     });
     const result = await newOfferedCourse.save();
 
@@ -348,10 +330,12 @@ const getOfferedCoursesOfInstructor = async (req, res) => {
         const element = registeredCourses[i];
         const course = await courseSchema.findById(element.courseId);
         if (course) {
+          const ctx = await getCourseSemesterContext(course);
           registeredCoursesDetail.push({
             ...course._doc,
+            ...ctx,
             requestId: element._id,
-            status: element.status || "approved",
+            status: element.status || 'approved',
             reviewedAt: element.reviewedAt,
           });
         }
@@ -377,100 +361,11 @@ const getOfferedCoursesOfInstructor = async (req, res) => {
   }
 };
 
-const registerRegisteredCourse = async (req, res) => {
-  try {
-    const { courseId, instructorId, studentId } = req.body;
-
-    // validation
-    switch (true) {
-      case !courseId:
-        return res.status(400).send({
-          success: false,
-          message: 'Course ID is mandatory!',
-        });
-      case !instructorId:
-        return res.status(400).send({
-          success: false,
-          message: 'Instructor ID is mandatory!',
-        });
-      case !studentId:
-        return res.status(400).send({
-          success: false,
-          message: 'Student ID is mandatory!',
-        });
-      default:
-        break;
-    }
-
-    // ensuring course's, instructor's and student's existence
-    const courseExists = await courseSchema.findById(courseId);
-    const instructorExists = await instructorSchema.findById(instructorId);
-    const studentExists = await studentSchema.findById(studentId);
-    if (!instructorExists && !courseExists && !studentExists) {
-      return res.status(400).send({
-        success: false,
-        message: 'This course, instructor and student do not exist.',
-      });
-    }
-    if (!courseExists) {
-      return res.status(400).send({
-        success: false,
-        message: 'This course does not exist.',
-      });
-    }
-    if (!instructorExists) {
-      return res.status(400).send({
-        success: false,
-        message: 'This instructor does not exist.',
-      });
-    }
-    if (!studentExists) {
-      return res.status(400).send({
-        success: false,
-        message: 'This student does not exist.',
-      });
-    }
-
-    // ensuring uniqueness
-    const registeredCourseExists = await registeredCourseSchema.find({
-      courseId,
-      studentId,
-    });
-    if (registeredCourseExists.length) {
-      return res.status(400).send({
-        success: false,
-        message: 'This student has already registered this course.',
-      });
-    }
-
-    // registration
-    const newRegisteredCourse = new registeredCourseSchema({
-      courseId,
-      instructorId,
-      studentId,
-    });
-    const result = await newRegisteredCourse.save();
-
-    if (result) {
-      res.status(200).send({
-        success: true,
-        message: 'Course registered successfully!',
-        data: newRegisteredCourse,
-      });
-    } else {
-      res.status(500).send({
-        success: false,
-        message: 'Something went wrong while offering the course.',
-        error,
-      });
-    }
-  } catch (error) {
-    res.status(500).send({
-      success: false,
-      message: 'Something went wrong while offering the course.',
-      error,
-    });
-  }
+const registerRegisteredCourse = async (_req, res) => {
+  return res.status(400).send({
+    success: false,
+    message: 'Manual course registration is disabled. Students enroll in a program and receive semester courses automatically.',
+  });
 };
 
 const getRegisteredCoursesOfStudent = async (req, res) => {
@@ -572,6 +467,8 @@ const getRegisteredStudentsOfInstructor = async (req, res) => {
             ...(student._doc),
             courseTitle: course.title,
             courseId: course._id,
+            programId: element.programId,
+            semesterNumber: element.semesterNumber,
           });
       }
       res.status(200).send({
@@ -614,6 +511,7 @@ const getOfferedCourseAssignments = async (req, res) => {
       const course = await courseSchema.findById(item.courseId);
       const instructor = await instructorSchema.findById(item.instructorId);
       if (course && instructor) {
+        const ctx = await getCourseSemesterContext(course);
         detail.push({
           ...item._doc,
           courseTitle: course.title,
@@ -621,6 +519,9 @@ const getOfferedCourseAssignments = async (req, res) => {
           instructorName: instructor.fname + ' ' + instructor.lname,
           instructorEmail: instructor.email,
           assignedAt: item.reviewedAt || item.createdAt,
+          programName: ctx?.programName,
+          semesterNumber: ctx?.semesterNumber,
+          semesterTitle: ctx?.semesterTitle,
         });
       }
     }
@@ -712,6 +613,17 @@ const instructorReviewOfferedCourse = async (req, res) => {
     }
 
     if (normalizedAction === 'approve') {
+      const otherApproved = await offeredCourseSchema.findOne({
+        courseId: offer.courseId,
+        status: 'approved',
+        instructorId: { $ne: offer.instructorId },
+      });
+      if (otherApproved) {
+        return res.status(400).send({
+          success: false,
+          message: 'Another instructor is already approved for this semester course.',
+        });
+      }
       const approvedExists = await offeredCourseSchema.findOne({
         courseId: offer.courseId,
         instructorId: offer.instructorId,

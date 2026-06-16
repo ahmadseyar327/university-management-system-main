@@ -53,7 +53,7 @@ export default function AdminRegisterInstructorScreen({ navigation }: Props) {
 
   return (
     <ScreenContainer>
-      <ScreenHeader title="Register instructor" subtitle="Create a new faculty account." />
+      <ScreenHeader title="Register instructor" subtitle="Create a new faculty account." onBack={() => navigation.goBack()} />
       <View style={[styles.card, shadow.card]}>
         <View style={styles.row}>
           <View style={styles.half}>

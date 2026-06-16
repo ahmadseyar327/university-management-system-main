@@ -4,7 +4,6 @@ import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  FlatList,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -12,9 +11,10 @@ import {
   Text,
   View,
 } from "react-native";
-import { courseEndpoints, instructorEndpoints } from "../api/endpoints";
+import { courseEndpoints, instructorEndpoints, programEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
-import { EmptyState, ScreenContainer, ScreenHeader } from "../components";
+import { ScreenContainer, ScreenHeader, SimpleSelect } from "../components";
+import type { SelectOption } from "../components/SimpleSelect";
 import LoadingView from "../components/LoadingView";
 import { useAuth } from "../contexts/AuthContext";
 import type { AdminTabParamList } from "../navigation/types";
@@ -23,18 +23,23 @@ import { mongoId } from "../utils/mongoId";
 import { toastError, toastSuccess } from "../utils/toasts";
 
 type OfferRow = Record<string, unknown>;
+type Semester = { semesterNumber?: number; title?: string };
 type Props = DrawerScreenProps<AdminTabParamList, "AdminOfferRequests">;
 
 function initials(row: Record<string, unknown>) {
   return `${String(row.fname ?? "").charAt(0)}${String(row.lname ?? "").charAt(0)}`.toUpperCase();
 }
 
-export default function AdminOfferRequestsScreen(_props: Props) {
+export default function AdminOfferRequestsScreen({ navigation }: Props) {
   const { adminData } = useAuth();
   const adminId = mongoId(adminData);
+  const [programs, setPrograms] = useState<Record<string, unknown>[]>([]);
+  const [semesters, setSemesters] = useState<Semester[]>([]);
+  const [semesterCourses, setSemesterCourses] = useState<Record<string, unknown>[]>([]);
   const [instructors, setInstructors] = useState<Record<string, unknown>[]>([]);
-  const [courses, setCourses] = useState<Record<string, unknown>[]>([]);
   const [offers, setOffers] = useState<OfferRow[]>([]);
+  const [programId, setProgramId] = useState("");
+  const [semesterNumber, setSemesterNumber] = useState("1");
   const [instructorId, setInstructorId] = useState("");
   const [courseId, setCourseId] = useState("");
   const [loading, setLoading] = useState(true);
@@ -47,10 +52,10 @@ export default function AdminOfferRequestsScreen(_props: Props) {
     setOffers(res?.success && res.data ? (res.data as OfferRow[]) : []);
   }, []);
 
-  const load = useCallback(async () => {
-    const [instRes, courseRes] = await Promise.all([
+  const loadBase = useCallback(async () => {
+    const [instRes, programRes] = await Promise.all([
       fetchResponse(instructorEndpoints.getInstructors(), 0, null),
-      fetchResponse(courseEndpoints.getCourses(), 0, null),
+      fetchResponse(programEndpoints.getPrograms(), 0, null),
       loadOffers(),
     ]);
     if (instRes?.success) {
@@ -61,11 +66,37 @@ export default function AdminOfferRequestsScreen(_props: Props) {
         )
       );
     }
-    if (courseRes?.success) {
-      const d = (courseRes.data as Record<string, unknown>[]) ?? [];
-      setCourses([...d].sort((a, b) => String(a.title).localeCompare(String(b.title))));
+    if (programRes?.success) {
+      const d = (programRes.data as Record<string, unknown>[]) ?? [];
+      setPrograms(d);
+      if (d.length) setProgramId(String(d[0]._id ?? ""));
     }
   }, [loadOffers]);
+
+  const loadSemesters = useCallback(async () => {
+    if (!programId) return;
+    const res = await fetchResponse(programEndpoints.getProgramById(programId), 0, null);
+    if (res?.success) {
+      const sems = (res.data?.semesters as Semester[]) ?? [];
+      setSemesters(sems);
+      if (sems.length) setSemesterNumber(String(sems[0].semesterNumber ?? 1));
+    }
+  }, [programId]);
+
+  const loadSemesterCourses = useCallback(async () => {
+    if (!programId || !semesterNumber) return;
+    const res = await fetchResponse(
+      programEndpoints.getSemesterCourses(programId, Number(semesterNumber)),
+      0,
+      null
+    );
+    if (res?.success) {
+      setSemesterCourses((res.data?.courses as Record<string, unknown>[]) ?? []);
+    } else {
+      setSemesterCourses([]);
+    }
+    setCourseId("");
+  }, [programId, semesterNumber]);
 
   useFocusEffect(
     useCallback(() => {
@@ -75,13 +106,26 @@ export default function AdminOfferRequestsScreen(_props: Props) {
           setLoading(true);
           firstFocus.current = false;
         }
-        await load();
+        await loadBase();
         if (!cancelled) setLoading(false);
       })();
       return () => {
         cancelled = true;
       };
-    }, [load])
+    }, [loadBase])
+  );
+
+  useEffect(() => {
+    void loadSemesters();
+  }, [loadSemesters]);
+
+  useEffect(() => {
+    void loadSemesterCourses();
+  }, [loadSemesterCourses]);
+
+  const assignedIds = useMemo(
+    () => new Set(offers.filter((o) => o.status === "approved").map((o) => String(o.courseId))),
+    [offers]
   );
 
   const takenIds = useMemo(() => {
@@ -98,22 +142,38 @@ export default function AdminOfferRequestsScreen(_props: Props) {
   }, [offers, instructorId]);
 
   const available = useMemo(
-    () => courses.filter((c) => !takenIds.has(mongoId(c))),
-    [courses, takenIds]
+    () =>
+      semesterCourses.filter((c) => {
+        const id = mongoId(c);
+        return id && !assignedIds.has(id) && !takenIds.has(id);
+      }),
+    [semesterCourses, assignedIds, takenIds]
   );
 
   const pending = useMemo(() => offers.filter((o) => o.status === "pending"), [offers]);
   const active = useMemo(() => offers.filter((o) => o.status === "approved"), [offers]);
 
+  const programOpts: SelectOption[] = programs.map((p) => ({
+    label: String(p.name ?? "Program"),
+    value: String(p._id ?? ""),
+  }));
+
+  const semesterOpts: SelectOption[] = semesters.map((s) => ({
+    label: `Semester ${s.semesterNumber} — ${s.title ?? ""}`,
+    value: String(s.semesterNumber ?? ""),
+  }));
+
   async function onRefresh() {
     setRefreshing(true);
-    await load();
+    await loadBase();
+    await loadSemesters();
+    await loadSemesterCourses();
     setRefreshing(false);
   }
 
   async function sendOffer() {
     if (!instructorId || !courseId) {
-      toastError("Select an instructor and a course.");
+      toastError("Select an instructor and a semester course.");
       return;
     }
     setSending(true);
@@ -149,8 +209,9 @@ export default function AdminOfferRequestsScreen(_props: Props) {
   return (
     <ScreenContainer>
       <ScreenHeader
-        title="Offer courses"
-        subtitle="Pick an instructor and course. They must accept before it is active."
+        title="Offer semester courses"
+        subtitle="Pick program, semester, instructor, then course."
+        onBack={() => navigation.goBack()}
       />
 
       <ScrollView
@@ -158,21 +219,24 @@ export default function AdminOfferRequestsScreen(_props: Props) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
+        <SimpleSelect label="Program" options={programOpts} value={programId} onChange={setProgramId} />
+        <SimpleSelect label="Semester" options={semesterOpts} value={semesterNumber} onChange={setSemesterNumber} />
+
         <Text style={styles.step}>1. Instructor</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.hScroll}>
           {instructors.map((inst) => {
             const id = mongoId(inst);
-            const active = instructorId === id;
+            const activeChip = instructorId === id;
             return (
               <Pressable
                 key={id}
-                style={[styles.personChip, active && styles.personChipActive, shadow.soft]}
+                style={[styles.personChip, activeChip && styles.personChipActive, shadow.soft]}
                 onPress={() => {
                   setInstructorId(id);
                   setCourseId("");
                 }}
               >
-                <View style={[styles.avatar, active && styles.avatarActive]}>
+                <View style={[styles.avatar, activeChip && styles.avatarActive]}>
                   <Text style={styles.avatarTxt}>{initials(inst)}</Text>
                 </View>
                 <Text style={styles.personName} numberOfLines={1}>
@@ -183,11 +247,13 @@ export default function AdminOfferRequestsScreen(_props: Props) {
           })}
         </ScrollView>
 
-        <Text style={styles.step}>2. Course</Text>
+        <Text style={styles.step}>2. Semester course</Text>
         {!instructorId ? (
           <Text style={styles.hint}>Select an instructor first.</Text>
+        ) : semesterCourses.length === 0 ? (
+          <Text style={styles.hint}>No courses in this semester. Add them under Programs.</Text>
         ) : available.length === 0 ? (
-          <Text style={styles.hint}>No more courses available for this instructor.</Text>
+          <Text style={styles.hint}>No available courses for this instructor in this semester.</Text>
         ) : (
           <View style={styles.courseGrid}>
             {available.map((c) => {
@@ -229,7 +295,10 @@ export default function AdminOfferRequestsScreen(_props: Props) {
             <View key={mongoId(row)} style={[styles.statusRow, shadow.soft]}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.statusTitle}>{String(row.courseTitle)}</Text>
-                <Text style={styles.statusSub}>{String(row.instructorName)}</Text>
+                <Text style={styles.statusSub}>
+                  {String(row.instructorName)}
+                  {row.programName ? ` · ${row.programName} Sem ${row.semesterNumber}` : ""}
+                </Text>
               </View>
               <Pressable onPress={() => void cancelOffer(row)}>
                 <Text style={styles.cancelTxt}>Cancel</Text>
@@ -246,7 +315,10 @@ export default function AdminOfferRequestsScreen(_props: Props) {
             <View key={mongoId(row)} style={[styles.statusRow, shadow.soft]}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.statusTitle}>{String(row.courseTitle)}</Text>
-                <Text style={styles.statusSub}>{String(row.instructorName)}</Text>
+                <Text style={styles.statusSub}>
+                  {String(row.instructorName)}
+                  {row.programName ? ` · ${row.programName} Sem ${row.semesterNumber}` : ""}
+                </Text>
               </View>
               <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
             </View>
@@ -265,6 +337,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: spacing.sm,
+    marginTop: spacing.sm,
   },
   hScroll: { marginBottom: spacing.md },
   personChip: {

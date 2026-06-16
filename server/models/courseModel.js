@@ -26,6 +26,15 @@ const courseSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    semesterId: {
+      type: String,
+      ref: "semesters",
+    },
+    description: {
+      type: String,
+      trim: true,
+      default: "",
+    },
   },
   { timestamps: true }
 );

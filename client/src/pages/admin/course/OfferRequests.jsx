@@ -3,8 +3,10 @@ import AdminLayout from '../../../layouts/AdminLayout';
 import PageHeader from '../../../components/instructor/PageHeader';
 import ContentCard from '../../../components/instructor/ContentCard';
 import PrimaryButton from '../../../components/instructor/PrimaryButton';
+import SelectField from '../../../components/inputs/SelectField';
 import { fetchResponse } from '../../../api/service';
 import { courseEndpoints } from '../../../api/endpoints/courseEndpoints';
+import { programEndpoints } from '../../../api/endpoints/programEndpoints';
 import { instructorEndpoints } from '../../../api/endpoints/instructorEndpoints';
 import { toastErrorObject, toastSuccessObject } from '../../../utility/toasts';
 import { toast } from 'react-toastify';
@@ -15,9 +17,13 @@ function initials(fname, lname) {
 
 export default function OfferRequests() {
   const adminId = JSON.parse(localStorage.getItem('admin'))?._id;
+  const [programs, setPrograms] = useState([]);
+  const [semesters, setSemesters] = useState([]);
+  const [semesterCourses, setSemesterCourses] = useState([]);
   const [instructors, setInstructors] = useState([]);
-  const [courses, setCourses] = useState([]);
   const [offers, setOffers] = useState([]);
+  const [programId, setProgramId] = useState('');
+  const [semesterNumber, setSemesterNumber] = useState('1');
   const [selectedInstructorId, setSelectedInstructorId] = useState('');
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -27,10 +33,10 @@ export default function OfferRequests() {
     setOffers(res?.success && res.data ? res.data : []);
   }
 
-  async function load() {
-    const [instructorRes, courseRes] = await Promise.all([
+  async function loadBase() {
+    const [instructorRes, programRes] = await Promise.all([
       fetchResponse(instructorEndpoints.getInstructors(), 0, null),
-      fetchResponse(courseEndpoints.getCourses(), 0, null),
+      fetchResponse(programEndpoints.getPrograms(), 0, null),
       loadOffers(),
     ]);
 
@@ -44,22 +50,64 @@ export default function OfferRequests() {
       setInstructors([]);
     }
 
-    if (courseRes?.success) {
-      setCourses(
-        [...(courseRes.data || [])].sort((a, b) => a.title.localeCompare(b.title))
-      );
+    if (programRes?.success) {
+      const list = programRes.data || [];
+      setPrograms(list);
+      if (list.length && !programId) setProgramId(list[0]._id);
     } else {
-      setCourses([]);
+      setPrograms([]);
     }
   }
 
   useEffect(() => {
     (async () => {
       setIsLoading(true);
-      await load();
+      await loadBase();
       setIsLoading(false);
     })();
   }, []);
+
+  useEffect(() => {
+    if (!programId) {
+      setSemesters([]);
+      return;
+    }
+    (async () => {
+      const res = await fetchResponse(programEndpoints.getProgramById(programId), 0, null);
+      if (res?.success) {
+        const sems = res.data?.semesters ?? [];
+        setSemesters(sems);
+        if (sems.length) setSemesterNumber(String(sems[0].semesterNumber));
+      } else {
+        setSemesters([]);
+      }
+    })();
+  }, [programId]);
+
+  useEffect(() => {
+    if (!programId || !semesterNumber) {
+      setSemesterCourses([]);
+      return;
+    }
+    (async () => {
+      const res = await fetchResponse(
+        programEndpoints.getSemesterCourses(programId, semesterNumber),
+        0,
+        null
+      );
+      if (res?.success) {
+        setSemesterCourses(res.data?.courses ?? []);
+      } else {
+        setSemesterCourses([]);
+      }
+      setSelectedCourseId('');
+    })();
+  }, [programId, semesterNumber]);
+
+  const assignedCourseIds = useMemo(
+    () => new Set(offers.filter((o) => o.status === 'approved').map((o) => o.courseId)),
+    [offers]
+  );
 
   const takenCourseIds = useMemo(() => {
     if (!selectedInstructorId) return new Set();
@@ -75,21 +123,21 @@ export default function OfferRequests() {
   }, [offers, selectedInstructorId]);
 
   const availableCourses = useMemo(
-    () => courses.filter((c) => !takenCourseIds.has(c._id)),
-    [courses, takenCourseIds]
+    () =>
+      semesterCourses.filter(
+        (c) => !assignedCourseIds.has(c._id) && !takenCourseIds.has(c._id)
+      ),
+    [semesterCourses, assignedCourseIds, takenCourseIds]
   );
 
-  const pendingOffers = useMemo(
-    () => offers.filter((o) => o.status === 'pending'),
-    [offers]
-  );
-
-  const activeOffers = useMemo(
-    () => offers.filter((o) => o.status === 'approved'),
-    [offers]
-  );
+  const pendingOffers = useMemo(() => offers.filter((o) => o.status === 'pending'), [offers]);
+  const activeOffers = useMemo(() => offers.filter((o) => o.status === 'approved'), [offers]);
 
   const selectedInstructor = instructors.find((i) => i._id === selectedInstructorId);
+  const semesterOptions = semesters.map((s) => ({
+    value: String(s.semesterNumber),
+    title: `Semester ${s.semesterNumber} — ${s.title}`,
+  }));
 
   function pickInstructor(id) {
     setSelectedInstructorId(id);
@@ -98,7 +146,7 @@ export default function OfferRequests() {
 
   async function sendOffer() {
     if (!selectedInstructorId || !selectedCourseId) {
-      toast.error('Select an instructor and a course.', toastErrorObject);
+      toast.error('Select an instructor and a semester course.', toastErrorObject);
       return;
     }
 
@@ -124,11 +172,7 @@ export default function OfferRequests() {
     if (!window.confirm(`Cancel offer for ${row.courseTitle}?`)) return;
 
     setIsLoading(true);
-    const res = await fetchResponse(
-      courseEndpoints.deleteCourseAssignment(row._id),
-      3,
-      null
-    );
+    const res = await fetchResponse(courseEndpoints.deleteCourseAssignment(row._id), 3, null);
     setIsLoading(false);
 
     if (!res?.success) {
@@ -143,9 +187,28 @@ export default function OfferRequests() {
   return (
     <AdminLayout isLoading={isLoading}>
       <PageHeader
-        title="Offer Courses"
-        subtitle="Send a course offer to an instructor. They must accept before it becomes an active assignment."
+        title="Offer Semester Courses"
+        subtitle="Assign program semester courses to instructors. They must accept before teaching."
       />
+
+      <ContentCard title="Program & semester" subtitle="Pick where the course lives in the curriculum." className="mb-4">
+        <div className="inst-filter-grid">
+          <SelectField
+            variant="instructor"
+            label="Program"
+            options={programs.map((p) => ({ value: p._id, title: p.name }))}
+            value={programId}
+            onChange={(e) => setProgramId(e.target.value)}
+          />
+          <SelectField
+            variant="instructor"
+            label="Semester"
+            options={semesterOptions}
+            value={semesterNumber}
+            onChange={(e) => setSemesterNumber(e.target.value)}
+          />
+        </div>
+      </ContentCard>
 
       <div className="offer-workspace">
         <div className="offer-panel">
@@ -179,9 +242,13 @@ export default function OfferRequests() {
         </div>
 
         <div className="offer-panel">
-          <p className="offer-panel-title">Step 2 — Course</p>
+          <p className="offer-panel-title">Step 2 — Semester course</p>
           {!selectedInstructorId ? (
-            <p className="offer-empty-hint">Select an instructor to see available courses.</p>
+            <p className="offer-empty-hint">Select an instructor first.</p>
+          ) : !semesterCourses.length ? (
+            <p className="offer-empty-hint">
+              No courses in this semester yet. Add courses under Programs → manage semester.
+            </p>
           ) : availableCourses.length ? (
             <>
               <p className="inst-card-subtitle mb-3">
@@ -189,6 +256,8 @@ export default function OfferRequests() {
                 <strong>
                   {selectedInstructor?.fname} {selectedInstructor?.lname}
                 </strong>
+                {' · Semester '}
+                {semesterNumber}
                 {' · '}
                 {availableCourses.length} course(s) available
               </p>
@@ -218,17 +287,14 @@ export default function OfferRequests() {
             </>
           ) : (
             <p className="offer-empty-hint">
-              All courses are already offered or assigned to this instructor.
+              All semester courses are assigned or already offered to this instructor.
             </p>
           )}
         </div>
       </div>
 
       <div className="offer-status-grid">
-        <ContentCard
-          title="Awaiting approval"
-          subtitle={`${pendingOffers.length} pending`}
-        >
+        <ContentCard title="Awaiting approval" subtitle={`${pendingOffers.length} pending`}>
           {pendingOffers.length ? (
             <div className="offer-row-list">
               {pendingOffers.map((row) => (
@@ -237,6 +303,7 @@ export default function OfferRequests() {
                     <p className="offer-row-title">{row.courseTitle}</p>
                     <p className="offer-row-sub">
                       {row.instructorName} · {row.courseCode}
+                      {row.programName ? ` · ${row.programName} Sem ${row.semesterNumber}` : ''}
                     </p>
                   </div>
                   <span className="inst-badge inst-badge-warning">Pending</span>
@@ -255,10 +322,7 @@ export default function OfferRequests() {
           )}
         </ContentCard>
 
-        <ContentCard
-          title="Active assignments"
-          subtitle={`${activeOffers.length} approved`}
-        >
+        <ContentCard title="Active assignments" subtitle={`${activeOffers.length} approved`}>
           {activeOffers.length ? (
             <div className="offer-row-list">
               {activeOffers.map((row) => (
@@ -267,6 +331,7 @@ export default function OfferRequests() {
                     <p className="offer-row-title">{row.courseTitle}</p>
                     <p className="offer-row-sub">
                       {row.instructorName} · {row.courseCode}
+                      {row.programName ? ` · ${row.programName} Sem ${row.semesterNumber}` : ''}
                     </p>
                   </div>
                   <span className="inst-badge inst-badge-success">Active</span>

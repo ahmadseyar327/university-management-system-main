@@ -111,6 +111,8 @@ async function publishSemesterResults(adminId, programId, semesterNumber) {
           status: STUDENT_STATUS.READY_FOR_REGISTRATION,
         });
       }
+    } else if (semesterResult.result === SEMESTER_RESULT.FAILED) {
+      await handleFailedSemester(record.studentId, programId, semesterNumber);
     }
 
     updates.push({

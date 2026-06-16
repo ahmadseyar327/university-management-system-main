@@ -4,17 +4,17 @@ import React, { useCallback, useRef, useState } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import { programEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
-import { EmptyState } from "../components";
+import { EmptyState, PrimaryButton } from "../components";
 import LoadingView from "../components/LoadingView";
 import type { AdminTabParamList } from "../navigation/types";
-import { colors } from "../theme";
+import { colors, spacing } from "../theme";
 import { listStyles } from "../theme/listStyles";
 import { toastError } from "../utils/toasts";
 
 type Program = { _id?: string; name?: string; description?: string; totalSemesters?: number };
-type Props = DrawerScreenProps<AdminTabParamList, "AdminCourses">;
+type Props = DrawerScreenProps<AdminTabParamList, "AdminPrograms">;
 
-export default function AdminCoursesListScreen({ navigation }: Props) {
+export default function AdminProgramsScreen({ navigation }: Props) {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -51,23 +51,13 @@ export default function AdminCoursesListScreen({ navigation }: Props) {
 
   return (
     <View style={listStyles.screen}>
-      <View style={{ padding: 16, paddingBottom: 8 }}>
-        <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
-          Courses are managed per semester inside each program. Use Programs or Add semester course.
-        </Text>
+      <View style={{ padding: spacing.md }}>
+        <PrimaryButton title="Create program (use web for full editor)" onPress={() => navigation.navigate("AdminSemester")} />
       </View>
       <FlatList
         data={programs}
         keyExtractor={(item, i) => String(item._id ?? i)}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => {
-              setRefreshing(true);
-              void load().then(() => setRefreshing(false));
-            }}
-          />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().then(() => setRefreshing(false)); }} />}
         contentContainerStyle={listStyles.listFlush}
         ListEmptyComponent={
           <View style={listStyles.emptyWrap}>
@@ -76,14 +66,11 @@ export default function AdminCoursesListScreen({ navigation }: Props) {
         }
         ItemSeparatorComponent={() => <View style={listStyles.sep} />}
         renderItem={({ item }) => (
-          <Pressable
-            style={({ pressed }) => [listStyles.row, pressed && listStyles.rowPressed]}
-            onPress={() => navigation.navigate("AdminPrograms")}
-          >
+          <Pressable style={({ pressed }) => [listStyles.row, pressed && listStyles.rowPressed]}>
             <View style={{ flex: 1 }}>
               <Text style={listStyles.rowName}>{item.name ?? "Program"}</Text>
               <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                {item.totalSemesters ?? 8} semesters
+                {item.totalSemesters ?? 8} semesters · {item.description ?? "No description"}
               </Text>
             </View>
           </Pressable>

@@ -87,7 +87,8 @@ export default function InstructorCourses() {
                 <div className="offer-row-main">
                   <p className="offer-row-title">{course.title}</p>
                   <p className="offer-row-sub">
-                    {course.code} · {course.type} · {course.creditHours} credits
+                    {course.code} · {course.type} · Sem {course.semesterNumber ?? '—'}
+                    {course.programName ? ` · ${course.programName}` : ''}
                   </p>
                 </div>
                 <div className="offer-pending-actions">
@@ -120,9 +121,9 @@ export default function InstructorCourses() {
       >
         <DynamicTable
           variant="instructor"
-          headers={['Title', 'Code', 'Type', 'Credit Hours', 'Fee']}
+          headers={['Title', 'Code', 'Program', 'Semester', 'Type', 'Fee']}
           data={activeCourses}
-          dataAttributes={['title', 'code', 'type', 'creditHours', 'fee']}
+          dataAttributes={['title', 'code', 'programName', 'semesterNumber', 'type', 'fee']}
         />
       </ContentCard>
     </InstructorLayout>

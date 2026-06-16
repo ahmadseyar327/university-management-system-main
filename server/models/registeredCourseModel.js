@@ -16,6 +16,20 @@ const registeredCourseSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    programId: {
+      type: String,
+      ref: "programs",
+    },
+    semesterNumber: {
+      type: Number,
+      min: 1,
+      max: 8,
+    },
+    enrollmentType: {
+      type: String,
+      enum: ["semester_auto", "manual"],
+      default: "manual",
+    },
   },
   { timestamps: true }
 );

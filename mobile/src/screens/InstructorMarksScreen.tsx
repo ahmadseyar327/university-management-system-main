@@ -1,15 +1,13 @@
 import type { DrawerScreenProps } from "@react-navigation/drawer";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
-import { courseEndpoints, instructorEndpoints } from "../api/endpoints";
+import { academicEndpoints, courseEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
 import {
   FadeInView,
-  FormTextInput,
   PrimaryButton,
   ScreenContainer,
   ScreenHeader,
-  SegmentedTabs,
   SimpleSelect,
 } from "../components";
 import type { SelectOption } from "../components/SimpleSelect";
@@ -17,7 +15,6 @@ import LoadingView from "../components/LoadingView";
 import { useAuth } from "../contexts/AuthContext";
 import type { InstructorTabParamList } from "../navigation/types";
 import { colors, radius, roleThemes, shadow, spacing } from "../theme";
-import { examTypes } from "../utils/constants";
 import { mongoId } from "../utils/mongoId";
 import { toastError, toastSuccess } from "../utils/toasts";
 
@@ -25,31 +22,33 @@ type Stud = Record<string, unknown> & {
   _id?: string;
   courseId?: string;
   courseTitle?: string;
+  programId?: string;
+  semesterNumber?: number;
   fname?: string;
   lname?: string;
   rollNumber?: unknown;
-  name?: string;
-  obtainedMarks?: unknown;
+};
+
+type MarkRow = {
+  studentId: string;
+  rollNumber?: unknown;
+  name: string;
+  midExamMarks: string;
+  finalExamMarks: string;
 };
 
 type Props = DrawerScreenProps<InstructorTabParamList, "InstructorMarks">;
 
-export default function InstructorMarksScreen(_props: Props) {
+export default function InstructorMarksScreen({ navigation }: Props) {
   const { instructorData } = useAuth();
   const instructorId = mongoId(instructorData);
-  const [mode, setMode] = useState<"post" | "view">("post");
   const [students, setStudents] = useState<Stud[]>([]);
   const [course, setCourse] = useState("");
-  const [examType, setExamType] = useState("");
-  const [activityNumber, setActivityNumber] = useState("");
-  const [totalMarks, setTotalMarks] = useState("");
-  const [weightage, setWeightage] = useState("");
-  const [marksRows, setMarksRows] = useState<Stud[]>([]);
-  const [academic, setAcademic] = useState<Record<string, unknown> | null>(null);
+  const [programId, setProgramId] = useState("");
+  const [semesterNumber, setSemesterNumber] = useState("");
+  const [rows, setRows] = useState<MarkRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-
-  const examOpts: SelectOption[] = examTypes.map((e) => ({ label: e, value: e }));
 
   const loadStudents = useCallback(async () => {
     const res = await fetchResponse(courseEndpoints.getStudentsOfInstructor(instructorId), 0, null);
@@ -58,28 +57,18 @@ export default function InstructorMarksScreen(_props: Props) {
       setStudents([]);
       return;
     }
-    const data = (res.data as Stud[]) ?? [];
-    setStudents(
-      [...data].sort((a, b) => {
-        const fn = String(a.fname).localeCompare(String(b.fname));
-        return fn !== 0 ? fn : String(a.lname).localeCompare(String(b.lname));
-      })
-    );
+    setStudents((res.data as Stud[]) ?? []);
   }, [instructorId]);
 
   useEffect(() => {
-    let c = false;
-    (async () => {
+    void (async () => {
       setLoading(true);
       await loadStudents();
-      if (!c) setLoading(false);
+      setLoading(false);
     })();
-    return () => {
-      c = true;
-    };
   }, [loadStudents]);
 
-  const courseOpts: SelectOption[] = (() => {
+  const courseOpts: SelectOption[] = useMemo(() => {
     const seen = new Set<string>();
     return students
       .filter((s) => {
@@ -90,96 +79,76 @@ export default function InstructorMarksScreen(_props: Props) {
       })
       .sort((a, b) => String(a.courseTitle).localeCompare(String(b.courseTitle)))
       .map((s) => ({ label: String(s.courseTitle ?? ""), value: String(s.courseId ?? "") }));
-  })();
+  }, [students]);
 
   useEffect(() => {
-    const filtered = students
-      .filter((s) => String(s.courseId) === course)
-      .map((s) => ({
-        ...s,
-        name: `${String(s.fname ?? "")} ${String(s.lname ?? "")}`.trim(),
-        obtainedMarks: s.obtainedMarks ?? "",
-        isPublic: true,
-      }));
-    setMarksRows(filtered);
-  }, [course, students]);
+    if (!course) {
+      setRows([]);
+      return;
+    }
+    const sample = students.find((s) => String(s.courseId) === course);
+    const prog = String(sample?.programId ?? "");
+    const sem = String(sample?.semesterNumber ?? "");
+    setProgramId(prog);
+    setSemesterNumber(sem);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (mode !== "view" || !course || !examType || !activityNumber) {
-        setAcademic(null);
-        return;
+    void (async () => {
+      if (prog && sem) {
+        const res = await fetchResponse(
+          academicEndpoints.getCourseResultsForInstructor(instructorId, course, Number(sem)),
+          0,
+          null
+        );
+        if (res?.success) {
+          setRows(
+            ((res.data as MarkRow[]) ?? []).map((r) => ({
+              studentId: String(r.studentId),
+              rollNumber: r.rollNumber,
+              name: String(r.name ?? ""),
+              midExamMarks: String(r.midExamMarks ?? 0),
+              finalExamMarks: String(r.finalExamMarks ?? 0),
+            }))
+          );
+          return;
+        }
       }
-      const res = await fetchResponse(
-        instructorEndpoints.getAcademics(instructorId, course, examType, activityNumber),
-        0,
-        null
+      setRows(
+        students
+          .filter((s) => String(s.courseId) === course)
+          .map((s) => ({
+            studentId: mongoId(s),
+            rollNumber: s.rollNumber,
+            name: `${String(s.fname ?? "")} ${String(s.lname ?? "")}`.trim(),
+            midExamMarks: "0",
+            finalExamMarks: "0",
+          }))
       );
-      if (cancelled) return;
-      if (!res?.success) {
-        setAcademic(null);
-        return;
-      }
-      const data = res.data as Record<string, unknown> | null;
-      if (data?.marks && Array.isArray(data.marks)) {
-        data.marks = (data.marks as Record<string, unknown>[]).map((m) => ({
-          ...m,
-          name: `${String(m.fname ?? "")} ${String(m.lname ?? "")}`.trim(),
-        }));
-      }
-      setAcademic(data);
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [mode, course, examType, activityNumber, instructorId]);
+  }, [course, instructorId, students]);
 
-  const postReady = course && examType && activityNumber && totalMarks && weightage;
-  const filled = marksRows.filter((m) => m.obtainedMarks !== "" && m.obtainedMarks != null).length;
-
-  async function postMarks() {
-    if (!postReady) {
-      toastError("Fill course, exam, activity #, total marks, and weightage.");
+  async function saveMarks() {
+    if (!course || !programId || !semesterNumber) {
+      toastError("Course must be linked to a semester enrollment.");
       return;
     }
     setBusy(true);
     try {
-      const res = await fetchResponse(instructorEndpoints.postAcademics(), 1, {
-        examType,
-        totalMarks: parseFloat(totalMarks),
-        activityNumber,
-        weightage,
-        marks: marksRows.map((m) => ({
-          studentId: mongoId(m),
-          obtainedMarks: parseFloat(String(m.obtainedMarks ?? "0")) || 0,
-          isPublic: true,
-        })),
-        instructorId,
-        courseId: course,
-      });
-      if (!res?.success) toastError(res?.message ?? "Post failed");
-      else toastSuccess(res.message ?? "Marks published");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const viewMarks = (academic?.marks as Stud[]) ?? [];
-
-  async function updateMarks() {
-    if (!academic?._id) {
-      toastError("Complete filters to load marks first.");
-      return;
-    }
-    setBusy(true);
-    try {
-      const res = await fetchResponse(instructorEndpoints.editAcademics(String(academic._id)), 2, {
-        ...academic,
-        marks: viewMarks,
-      });
-      if (!res?.success) toastError(res?.message ?? "Update failed");
-      else toastSuccess(res.message ?? "Saved");
+      for (const row of rows) {
+        const res = await fetchResponse(academicEndpoints.saveCourseResult(), 1, {
+          studentId: row.studentId,
+          courseId: course,
+          instructorId,
+          programId,
+          semesterNumber: Number(semesterNumber),
+          midExamMarks: Number(row.midExamMarks) || 0,
+          finalExamMarks: Number(row.finalExamMarks) || 0,
+        });
+        if (!res?.success) {
+          toastError(res?.message ?? "Save failed");
+          return;
+        }
+      }
+      toastSuccess("Marks saved");
     } finally {
       setBusy(false);
     }
@@ -189,135 +158,55 @@ export default function InstructorMarksScreen(_props: Props) {
 
   return (
     <ScreenContainer>
-      <ScreenHeader title="Marks" subtitle="Post new grades or update an existing activity." />
+      <ScreenHeader title="Semester marks" subtitle="Mid (20) + Final (80)" onBack={() => navigation.goBack()} />
 
       <FadeInView>
-        <SegmentedTabs
-          tabs={[
-            { key: "post", label: "Post marks" },
-            { key: "view", label: "View / edit" },
-          ]}
-          active={mode}
-          onChange={(k) => setMode(k as "post" | "view")}
-          accent={roleThemes.instructor.accent}
-        />
-      </FadeInView>
-
-      <FadeInView delay={60}>
         <View style={[styles.panel, shadow.soft]}>
-          <Text style={styles.step}>Assessment</Text>
           <SimpleSelect label="Course" options={courseOpts} value={course} onChange={setCourse} />
-          <SimpleSelect label="Exam type" options={examOpts} value={examType} onChange={setExamType} />
-          <FormTextInput
-            label="Activity number"
-            value={activityNumber}
-            onChangeText={setActivityNumber}
-            keyboardType="numeric"
-          />
-          {mode === "post" ? (
-            <>
-              <FormTextInput
-                label="Total marks"
-                value={totalMarks}
-                onChangeText={setTotalMarks}
-                keyboardType="decimal-pad"
-              />
-              <FormTextInput
-                label="Weightage"
-                value={weightage}
-                onChangeText={setWeightage}
-                keyboardType="decimal-pad"
-              />
-            </>
+          {semesterNumber ? (
+            <Text style={styles.hint}>Semester {semesterNumber} · Pass threshold 55/100</Text>
           ) : null}
         </View>
       </FadeInView>
 
-      {mode === "post" ? (
-        <FadeInView delay={100}>
-          {!course ? (
-            <Text style={styles.hint}>Select a course to load students.</Text>
-          ) : !postReady ? (
-            <Text style={styles.hint}>Complete all assessment fields above.</Text>
-          ) : (
-            <>
-              <View style={styles.progressWrap}>
-                <Text style={styles.progressLbl}>
-                  {filled} of {marksRows.length} graded
-                </Text>
-                <View style={styles.track}>
-                  <View
-                    style={[
-                      styles.fill,
-                      { width: marksRows.length ? `${(filled / marksRows.length) * 100}%` : "0%" },
-                    ]}
-                  />
-                </View>
-              </View>
-              {marksRows.map((m, i) => (
-                <View key={mongoId(m)} style={[styles.markCard, shadow.soft]}>
-                  <Text style={styles.roll}>{String(m.rollNumber ?? "")}</Text>
-                  <Text style={styles.nm} numberOfLines={1}>
-                    {String(m.name)}
-                  </Text>
-                  <TextInput
-                    style={styles.markIn}
-                    keyboardType="decimal-pad"
-                    placeholder="0"
-                    placeholderTextColor={colors.textMuted}
-                    value={String(m.obtainedMarks ?? "")}
-                    onChangeText={(t) => {
-                      const next = [...marksRows];
-                      next[i] = { ...next[i], obtainedMarks: t };
-                      setMarksRows(next);
-                    }}
-                  />
-                </View>
-              ))}
-              <PrimaryButton title="Publish marks" loading={busy} onPress={() => void postMarks()} />
-            </>
-          )}
-        </FadeInView>
+      {!course ? (
+        <Text style={styles.empty}>Select a course to load students.</Text>
       ) : (
-        <FadeInView delay={100}>
-          {!academic ? (
-            <Text style={styles.hint}>Enter activity # — marks load automatically.</Text>
-          ) : (
-            <>
-              <FormTextInput
-                label="Total marks"
-                value={String(academic?.totalMarks ?? "")}
-                onChangeText={(t) => setAcademic((a) => (a ? { ...a, totalMarks: t } : a))}
+        <>
+          {rows.map((row, i) => (
+            <View key={row.studentId} style={[styles.markCard, shadow.soft]}>
+              <Text style={styles.roll}>{String(row.rollNumber ?? "")}</Text>
+              <Text style={styles.nm} numberOfLines={1}>
+                {row.name}
+              </Text>
+              <TextInput
+                style={styles.markIn}
                 keyboardType="decimal-pad"
+                placeholder="Mid"
+                placeholderTextColor={colors.textMuted}
+                value={row.midExamMarks}
+                onChangeText={(t) => {
+                  const next = [...rows];
+                  next[i] = { ...next[i], midExamMarks: t };
+                  setRows(next);
+                }}
               />
-              <FormTextInput
-                label="Weightage"
-                value={String(academic?.weightage ?? "")}
-                onChangeText={(t) => setAcademic((a) => (a ? { ...a, weightage: t } : a))}
+              <TextInput
+                style={styles.markIn}
                 keyboardType="decimal-pad"
+                placeholder="Fin"
+                placeholderTextColor={colors.textMuted}
+                value={row.finalExamMarks}
+                onChangeText={(t) => {
+                  const next = [...rows];
+                  next[i] = { ...next[i], finalExamMarks: t };
+                  setRows(next);
+                }}
               />
-              {viewMarks.map((m, i) => (
-                <View key={String(m.studentId ?? i)} style={[styles.markCard, shadow.soft]}>
-                  <Text style={styles.roll}>{String(m.rollNumber ?? "")}</Text>
-                  <Text style={styles.nm} numberOfLines={1}>
-                    {String(m.name ?? "")}
-                  </Text>
-                  <TextInput
-                    style={styles.markIn}
-                    keyboardType="decimal-pad"
-                    value={String(m.obtainedMarks ?? m.marks ?? "")}
-                    onChangeText={(t) => {
-                      const next = [...viewMarks];
-                      next[i] = { ...next[i], obtainedMarks: t };
-                      setAcademic((a) => (a ? { ...a, marks: next } : a));
-                    }}
-                  />
-                </View>
-              ))}
-              <PrimaryButton title="Save changes" loading={busy} onPress={() => void updateMarks()} />
-            </>
-          )}
-        </FadeInView>
+            </View>
+          ))}
+          <PrimaryButton title="Save marks" loading={busy} onPress={() => void saveMarks()} />
+        </>
       )}
     </ScreenContainer>
   );
@@ -333,15 +222,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     gap: spacing.sm,
   },
-  step: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: colors.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 4,
-  },
-  hint: {
+  hint: { color: colors.textSecondary, fontSize: 13 },
+  empty: {
     color: colors.textSecondary,
     textAlign: "center",
     padding: spacing.lg,
@@ -351,15 +233,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radius.md,
   },
-  progressWrap: { marginBottom: spacing.md },
-  progressLbl: { fontSize: 12, color: colors.textSecondary, marginBottom: 6 },
-  track: {
-    height: 6,
-    backgroundColor: colors.borderLight,
-    borderRadius: radius.full,
-    overflow: "hidden",
-  },
-  fill: { height: "100%", backgroundColor: roleThemes.instructor.accent },
   markCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -374,15 +247,16 @@ const styles = StyleSheet.create({
   roll: { width: 48, fontSize: 12, color: colors.textMuted, fontWeight: "700" },
   nm: { flex: 1, fontSize: 14, color: colors.text, fontWeight: "600", marginRight: 8 },
   markIn: {
-    width: 64,
+    width: 52,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.sm,
     padding: 8,
     textAlign: "center",
     fontWeight: "700",
-    fontSize: 15,
+    fontSize: 14,
     color: colors.text,
     backgroundColor: colors.surfaceMuted,
+    marginLeft: 4,
   },
 });

@@ -10,18 +10,18 @@ export default function Admin() {
   const { adminData } = useAuth();
 
   const quickLinks = [
+    { label: 'Programs', path: '/admin/programs' },
+    { label: 'Semester Lifecycle', path: '/admin/semester' },
     { label: 'Register Instructor', path: '/admin/instructors/register' },
     { label: 'Manage Instructors', path: '/admin/instructors/action' },
-    { label: 'Register Course', path: '/admin/courses/register' },
-    { label: 'Manage Courses', path: '/admin/courses/action' },
-    { label: 'Offer Courses', path: '/admin/courses/assign' },
+    { label: 'Offer Semester Courses', path: '/admin/offers' },
   ];
 
   return (
     <AdminLayout>
       <PageHeader
         title={`Welcome, ${adminData?.fname}`}
-        subtitle="Manage instructors, courses, and system settings."
+        subtitle="Manage programs, semesters, instructors, and course offers."
       />
 
       <div className="inst-stat-grid">

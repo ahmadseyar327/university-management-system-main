@@ -1,160 +1,116 @@
 import type { DrawerScreenProps } from "@react-navigation/drawer";
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { studentEndpoints } from "../api/endpoints";
+import { academicEndpoints } from "../api/endpoints";
 import { fetchResponse } from "../api/service";
-import {
-  ActivityCard,
-  EmptyState,
-  FadeInView,
-  MarksResultRow,
-  ScreenContainer,
-  ScreenHeader,
-  SimpleSelect,
-} from "../components";
-import type { SelectOption } from "../components/SimpleSelect";
+import { EmptyState, FadeInView, PrimaryButton, ScreenContainer, ScreenHeader } from "../components";
 import LoadingView from "../components/LoadingView";
 import { useAuth } from "../contexts/AuthContext";
 import type { StudentTabParamList } from "../navigation/types";
 import { colors, radius, shadow, spacing } from "../theme";
-import { examTypes } from "../utils/constants";
 import { mongoId } from "../utils/mongoId";
 import { toastError } from "../utils/toasts";
 
-type CourseOpt = { courseId: string; title: string; instructor: string };
-type MarkRow = Record<string, unknown>;
+type Course = { id?: string; name?: string; code?: string };
+type Result = {
+  courseId?: string;
+  midExamMarks?: number;
+  finalExamMarks?: number;
+  totalMarks?: number;
+  passFailStatus?: string;
+  isPublished?: boolean;
+};
+type Dashboard = {
+  currentSemester?: number;
+  semesterTitle?: string;
+  promotionStatus?: string;
+  courses?: Course[];
+  results?: Result[];
+};
 
 type Props = DrawerScreenProps<StudentTabParamList, "StudentMarks">;
 
-export default function StudentMarksScreen(_props: Props) {
+export default function StudentMarksScreen({ navigation }: Props) {
   const { studentData } = useAuth();
   const studentId = mongoId(studentData);
-  const [courses, setCourses] = useState<CourseOpt[]>([]);
-  const [examTypeList, setExamTypeList] = useState<string[]>([]);
-  const [courseId, setCourseId] = useState("");
-  const [marksByExam, setMarksByExam] = useState<Record<string, MarkRow[] | undefined>>({});
-  const [openExam, setOpenExam] = useState<string | null>(null);
-  const [loadingMeta, setLoadingMeta] = useState(true);
-  const [loadingExam, setLoadingExam] = useState<string | null>(null);
+  const [dashboard, setDashboard] = useState<Dashboard | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoadingMeta(true);
-      const res = await fetchResponse(studentEndpoints.getCourseAndExamTypeNames(studentId), 0, null);
-      if (!res?.success) {
-        if (!String(res?.message ?? "").toLowerCase().includes("not found")) {
-          toastError(res?.message ?? "Could not load data");
-        }
-        setCourses([]);
-        setExamTypeList([]);
-      } else {
-        const data = res.data as { courses?: CourseOpt[]; examTypes?: string[] };
-        setCourses(data?.courses ?? []);
-        setExamTypeList(data?.examTypes ?? [...examTypes]);
-      }
-      if (!cancelled) setLoadingMeta(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
+  const load = useCallback(async () => {
+    if (!studentId) return;
+    const res = await fetchResponse(academicEndpoints.getStudentDashboard(studentId), 0, null);
+    if (!res?.success) {
+      setDashboard(null);
+      return;
+    }
+    setDashboard(res.data as Dashboard);
   }, [studentId]);
 
   useEffect(() => {
-    setMarksByExam({});
-    setOpenExam(null);
-  }, [courseId]);
+    void (async () => {
+      setLoading(true);
+      await load();
+      setLoading(false);
+    })();
+  }, [load]);
 
-  const loadExam = useCallback(
-    async (exam: string) => {
-      if (!courseId) {
-        toastError("Select a course first.");
-        return;
-      }
-      setLoadingExam(exam);
-      const res = await fetchResponse(studentEndpoints.getAcademics(studentId, courseId, exam), 0, null);
-      if (!res?.success) {
-        toastError(res?.message ?? "Could not load marks");
-        setMarksByExam((m) => ({ ...m, [exam]: [] }));
-      } else {
-        const data = (res.data as MarkRow[]) ?? [];
-        setMarksByExam((m) => ({
-          ...m,
-          [exam]: [...data].sort(
-            (a, b) => Number(a.activityNumber ?? 0) - Number(b.activityNumber ?? 0)
-          ),
-        }));
-      }
-      setLoadingExam(null);
-    },
-    [courseId, studentId]
-  );
+  if (loading) return <LoadingView />;
 
-  const opts: SelectOption[] = courses.map((c) => ({
-    label: `${c.title} | ${c.instructor}`,
-    value: c.courseId,
-  }));
+  if (!dashboard) {
+    return (
+      <ScreenContainer>
+        <ScreenHeader title="My marks" subtitle="Semester results" onBack={() => navigation.goBack()} />
+        <EmptyState icon="document-text-outline" title="Enroll in a program to view marks." />
+        <PrimaryButton title="Enroll in program" onPress={() => navigation.navigate("StudentRegister")} />
+      </ScreenContainer>
+    );
+  }
 
-  const courseLabel = courses.find((c) => c.courseId === courseId);
-
-  if (loadingMeta) return <LoadingView />;
+  const resultsByCourse: Record<string, Result> = {};
+  (dashboard.results ?? []).forEach((r) => {
+    if (r.courseId) resultsByCourse[r.courseId] = r;
+  });
 
   return (
     <ScreenContainer>
-      <ScreenHeader title="My marks" subtitle="Grades by course and exam component." />
+      <ScreenHeader
+        title="My marks"
+        subtitle={`Semester ${dashboard.currentSemester ?? ""} · ${dashboard.promotionStatus ?? "PENDING"}`}
+        onBack={() => navigation.goBack()}
+      />
 
       <FadeInView>
         <View style={[styles.panel, shadow.soft]}>
-          <Text style={styles.step}>1 · Select course</Text>
-          <SimpleSelect label="Course | Instructor" options={opts} value={courseId} onChange={setCourseId} />
-          {courseLabel ? (
-            <View style={styles.banner}>
-              <Text style={styles.bannerTxt}>📚 {courseLabel.title}</Text>
-            </View>
-          ) : null}
+          <Text style={styles.step}>{dashboard.semesterTitle ?? "Current semester"}</Text>
+          <Text style={styles.meta}>Mid exam max 20 · Final max 80 · Pass at 55/100</Text>
         </View>
       </FadeInView>
 
-      <FadeInView delay={80}>
-        <Text style={styles.section}>Exam results</Text>
-        {examTypeList.length === 0 ? (
-          <EmptyState icon="document-text-outline" title="No exam types available." />
-        ) : (
-          examTypeList.map((exam, idx) => {
-            const expanded = openExam === exam;
-            const rows = marksByExam[exam];
-            return (
-              <FadeInView key={exam} delay={100 + idx * 50}>
-                <ActivityCard
-                  variant="instructor"
-                  header={exam}
-                  isExpanded={expanded}
-                  onToggle={() => {
-                    setOpenExam(expanded ? null : exam);
-                    if (!expanded && rows === undefined) void loadExam(exam);
-                  }}
-                >
-                  {loadingExam === exam ? (
-                    <ActivityIndicator color={colors.instructor} style={{ paddingVertical: 16 }} />
-                  ) : (rows ?? []).length === 0 ? (
-                    <Text style={styles.emptyRow}>No marks posted yet.</Text>
-                  ) : (
-                    (rows ?? []).map((row, i) => (
-                      <MarksResultRow
-                        key={i}
-                        activityNumber={row.activityNumber}
-                        weightage={row.weightage}
-                        totalMarks={row.totalMarks}
-                        obtained={row.marks}
-                      />
-                    ))
-                  )}
-                </ActivityCard>
-              </FadeInView>
-            );
-          })
-        )}
-      </FadeInView>
+      {(dashboard.courses ?? []).length === 0 ? (
+        <EmptyState icon="document-text-outline" title="No courses this semester." />
+      ) : (
+        (dashboard.courses ?? []).map((course, idx) => {
+          const result = resultsByCourse[course.id ?? ""];
+          const status = result?.passFailStatus ?? (result?.isPublished === false ? "Unpublished" : "Pending");
+          return (
+            <FadeInView key={course.id ?? idx} delay={80 + idx * 40}>
+              <View style={[styles.row, shadow.soft]}>
+                <Text style={styles.code}>{course.code}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.name}>{course.name}</Text>
+                  <Text style={styles.meta}>
+                    Mid {result?.midExamMarks ?? "—"}/20 · Final {result?.finalExamMarks ?? "—"}/80
+                  </Text>
+                </View>
+                <Text style={styles.score}>
+                  {result?.totalMarks ?? "—"}/100{"\n"}
+                  <Text style={styles.status}>{status}</Text>
+                </Text>
+              </View>
+            </FadeInView>
+          );
+        })
+      )}
     </ScreenContainer>
   );
 }
@@ -168,23 +124,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  step: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: colors.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
+  step: { fontWeight: "700", color: colors.text, fontSize: 15 },
+  meta: { color: colors.textSecondary, fontSize: 12, marginTop: 4 },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.md,
     marginBottom: spacing.sm,
-  },
-  banner: {
-    marginTop: spacing.sm,
-    padding: 10,
-    backgroundColor: colors.primarySoft,
-    borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  bannerTxt: { color: colors.primary, fontWeight: "600", fontSize: 13 },
-  section: { marginBottom: spacing.sm, fontWeight: "700", color: colors.text, fontSize: 15 },
-  emptyRow: { textAlign: "center", color: colors.textSecondary, paddingVertical: spacing.md },
+  code: { width: 56, fontWeight: "700", color: colors.textMuted, fontSize: 12 },
+  name: { fontWeight: "600", color: colors.text, fontSize: 14 },
+  score: { textAlign: "right", fontWeight: "700", color: colors.text, fontSize: 13 },
+  status: { fontWeight: "500", color: colors.textSecondary, fontSize: 11 },
 });

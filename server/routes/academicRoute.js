@@ -12,6 +12,10 @@ const {
   adminListEligibleStudents,
   recalculateSemester,
   updateStudentStatus,
+  studentConfirmPromotion,
+  getRegistrationStatus,
+  getSemesterHistory,
+  retryFailedSemester,
 } = require('../controllers/academicController');
 
 const router = express.Router();
@@ -19,16 +23,21 @@ const router = express.Router();
 router.post('/enroll', enrollInProgram);
 router.get('/record/:studentId', getStudentAcademicRecord);
 router.get('/dashboard/:studentId', getStudentDashboard);
+router.get('/history/:studentId', getSemesterHistory);
 
 router.post('/course-result', saveCourseResult);
 router.get('/course-result/instructor', getCourseResultsForInstructor);
 router.post('/semester/recalculate', recalculateSemester);
+
+router.post('/promotion/confirm', studentConfirmPromotion);
+router.get('/registration/status', getRegistrationStatus);
 
 router.post('/admin/publish-semester', adminPublishSemester);
 router.post('/admin/open-registration', adminOpenRegistration);
 router.post('/admin/close-registration', adminCloseRegistration);
 router.get('/admin/eligible-students', adminListEligibleStudents);
 router.post('/admin/confirm-promotion', confirmPromotion);
+router.post('/admin/retry-failed-semester', retryFailedSemester);
 router.put('/admin/student-status/:studentId', updateStudentStatus);
 
 module.exports = router;

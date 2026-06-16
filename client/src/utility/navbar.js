@@ -10,17 +10,7 @@ export const instructorNavbarContent = (setInstructorData) => ({
     },
     {
       title: 'Marks',
-      path: ['/instructor/marks/post', '/instructor/marks/view-or-update'],
-      children: [
-        {
-          title: 'Post',
-          path: '/instructor/marks/post',
-        },
-        {
-          title: 'View/Update',
-          path: '/instructor/marks/view-or-update',
-        },
-      ],
+      path: '/instructor/marks/post',
     },
     {
       title: 'Attendance',
@@ -55,8 +45,8 @@ export const studentNavbarContent = (setStudentData) => ({
       path: '/student/courses',
     },
     {
-      title: 'Register Course',
-      path: '/student/register/course',
+      title: 'Register Program',
+      path: '/student/enroll',
     },
     {
       title: 'Attendance',
@@ -87,6 +77,14 @@ export const adminNavbarContent = (setAdminData) => ({
       path: '/admin',
     },
     {
+      title: 'Programs',
+      path: '/admin/programs',
+    },
+    {
+      title: 'Semester Lifecycle',
+      path: '/admin/semester',
+    },
+    {
       title: 'Register Instructor',
       path: '/admin/instructors/register',
     },
@@ -95,16 +93,8 @@ export const adminNavbarContent = (setAdminData) => ({
       path: '/admin/instructors/action',
     },
     {
-      title: 'Register Course',
-      path: '/admin/courses/register',
-    },
-    {
-      title: 'Courses',
-      path: '/admin/courses/action',
-    },
-    {
-      title: 'Offer Courses',
-      path: '/admin/courses/assign',
+      title: 'Offer Semester Courses',
+      path: '/admin/offers',
     },
     {
       title: 'Settings',

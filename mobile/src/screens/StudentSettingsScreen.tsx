@@ -18,7 +18,7 @@ function delay(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));
 }
 
-export default function StudentSettingsScreen(_props: Props) {
+export default function StudentSettingsScreen({ navigation }: Props) {
   const { studentData, setStudentData } = useAuth();
   const studentId = mongoId(studentData);
   const [fname, setFname] = useState(String(studentData?.fname ?? ""));
@@ -57,7 +57,7 @@ export default function StudentSettingsScreen(_props: Props) {
 
   return (
     <ScreenContainer>
-      <ScreenHeader title="Settings" subtitle="Update your profile and password." />
+      <ScreenHeader title="Settings" subtitle="Update your profile and password." onBack={() => navigation.goBack()} />
       <View style={styles.card}>
         <View style={styles.row}>
           <View style={styles.half}>

@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon"
+    "start": "nodemon",
+    "migrate:semester": "node migrations/001-semester-system.js"
   },
   "author": "Ahsan Javed",
   "license": "ISC",

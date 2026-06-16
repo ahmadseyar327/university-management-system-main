@@ -18,7 +18,7 @@ function delay(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));
 }
 
-export default function AdminSettingsScreen(_props: Props) {
+export default function AdminSettingsScreen({ navigation }: Props) {
   const { adminData, setAdminData } = useAuth();
   const adminId = mongoId(adminData);
   const [fname, setFname] = useState(String(adminData?.fname ?? ""));
@@ -57,7 +57,7 @@ export default function AdminSettingsScreen(_props: Props) {
 
   return (
     <ScreenContainer>
-      <ScreenHeader title="Settings" subtitle="Update your admin profile and password." />
+      <ScreenHeader title="Settings" subtitle="Update your admin profile and password." onBack={() => navigation.goBack()} />
       <View style={[styles.card, shadow.card]}>
         <View style={styles.row}>
           <View style={styles.half}>
