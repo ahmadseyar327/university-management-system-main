@@ -15,6 +15,7 @@ import FadeInPanel from '../../../components/academics/FadeInPanel';
 export default function PostMarks() {
   const instructorId = JSON.parse(localStorage.getItem('instructor'))._id;
   const [students, setStudents] = useState([]);
+  const [instructorCourses, setInstructorCourses] = useState([]);
   const [courseId, setCourseId] = useState('');
   const [programId, setProgramId] = useState('');
   const [semesterNumber, setSemesterNumber] = useState('');
@@ -23,65 +24,80 @@ export default function PostMarks() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    async function fetchStudents() {
+    async function fetchData() {
       try {
-        const res = await fetchResponse(
-          courseEndpoints.getStudentsOfInstructor(instructorId),
-          0,
-          null
-        );
-        if (!res.success) {
-          toast.error(res.message, toastErrorObject);
+        const [studentsRes, coursesRes] = await Promise.all([
+          fetchResponse(courseEndpoints.getStudentsOfInstructor(instructorId), 0, null),
+          fetchResponse(courseEndpoints.getCoursesOfInstructor(instructorId), 0, null),
+        ]);
+        if (!studentsRes?.success) {
+          toast.error(studentsRes?.message ?? 'Could not load students', toastErrorObject);
           setStudents([]);
-          return;
+        } else {
+          setStudents(
+            (studentsRes.data ?? []).map((s) => ({
+              ...s,
+              courseId: String(s.courseId ?? ''),
+            }))
+          );
         }
-        setStudents(res.data ?? []);
+        if (coursesRes?.success) {
+          setInstructorCourses(
+            (coursesRes.data ?? []).filter((c) => c.status === 'approved')
+          );
+        } else {
+          setInstructorCourses([]);
+        }
       } catch (error) {
         console.error(error);
       } finally {
         setIsLoading(false);
       }
     }
-    void fetchStudents();
+    void fetchData();
   }, [instructorId]);
 
   const courseOptions = useMemo(() => {
-    const seen = new Set();
-    return students
-      .filter((s) => {
-        if (!s.courseId || seen.has(s.courseId)) return false;
-        seen.add(s.courseId);
-        return true;
-      })
-      .sort((a, b) => String(a.courseTitle).localeCompare(String(b.courseTitle)))
-      .map((s) => ({ value: s.courseId, title: s.courseTitle }));
-  }, [students]);
+    return instructorCourses
+      .sort((a, b) => String(a.title).localeCompare(String(b.title)))
+      .map((c) => ({
+        value: String(c._id ?? ''),
+        title: c.semesterNumber ? `Sem ${c.semesterNumber} · ${c.title}` : c.title,
+        programId: c.programId,
+        semesterNumber: c.semesterNumber,
+      }));
+  }, [instructorCourses]);
 
   useEffect(() => {
     if (!courseId) {
       setRows([]);
+      setProgramId('');
+      setSemesterNumber('');
       return;
     }
-    const sample = students.find((s) => s.courseId === courseId);
-    const prog = sample?.programId ?? '';
-    const sem = sample?.semesterNumber ?? '';
-    setProgramId(prog);
+
+    const selected = courseOptions.find((c) => c.value === courseId);
+    const prog = selected?.programId ?? '';
+    const sem = selected?.semesterNumber ?? '';
+    setProgramId(String(prog));
     setSemesterNumber(String(sem ?? ''));
 
     async function loadMarks() {
+      const courseStudents = students
+        .filter((s) => String(s.courseId) === courseId)
+        .map((s) => ({
+          studentId: s._id,
+          rollNumber: s.rollNumber,
+          name: `${s.fname} ${s.lname}`,
+          midExamMarks: 0,
+          finalExamMarks: 0,
+        }));
+
       if (!prog || !sem) {
-        const filtered = students
-          .filter((s) => s.courseId === courseId)
-          .map((s) => ({
-            studentId: s._id,
-            rollNumber: s.rollNumber,
-            name: `${s.fname} ${s.lname}`,
-            midExamMarks: 0,
-            finalExamMarks: 0,
-          }));
-        setRows(filtered);
+        setRows(courseStudents);
         return;
       }
+
       setIsLoading(true);
       try {
         const res = await fetchResponse(
@@ -89,30 +105,21 @@ export default function PostMarks() {
           0,
           null
         );
-        if (res?.success) {
-          setRows(res.data ?? []);
+        if (res?.success && res.data?.length) {
+          setRows(res.data);
         } else {
-          const filtered = students
-            .filter((s) => s.courseId === courseId)
-            .map((s) => ({
-              studentId: s._id,
-              rollNumber: s.rollNumber,
-              name: `${s.fname} ${s.lname}`,
-              midExamMarks: 0,
-              finalExamMarks: 0,
-            }));
-          setRows(filtered);
+          setRows(courseStudents);
         }
       } finally {
         setIsLoading(false);
       }
     }
     void loadMarks();
-  }, [courseId, instructorId, students]);
+  }, [courseId, instructorId, students, courseOptions]);
 
   async function saveAll() {
     if (!courseId || !programId || !semesterNumber) {
-      toast.error('Course must belong to a semester program enrollment.', toastErrorObject);
+      toast.error('Select a valid semester course.', toastErrorObject);
       return;
     }
     setSaving(true);
@@ -155,7 +162,7 @@ export default function PostMarks() {
 
       <div className="academics-layout-split">
         <FadeInPanel>
-          <AcademicsFilterPanel step="1" title="Course" subtitle="Select a course to grade">
+          <AcademicsFilterPanel step="1" title="Course" subtitle="Select a semester course to grade">
             <SelectField
               variant="instructor"
               label="Course"

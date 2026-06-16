@@ -9,6 +9,7 @@ const {
   countAttendanceSessions,
   resolveSemesterNumberForCourse,
 } = require('../services/attendanceService');
+const { getInstructorSemesterStudents } = require('../services/enrollmentQueryService');
 const { ATTENDANCE_TOTAL_DAYS } = require('../utils/academicRules');
 
 const registerInstructor = async (req, res) => {
@@ -526,10 +527,10 @@ const getAcademics = async (req, res) => {
 
     if (academics) {
       let marksWithStudentDetails = [];
-      const registeredStudents = await registeredCourseSchema.find({
-        instructorId,
-        courseId
-      });
+      const semesterRows = await getInstructorSemesterStudents(instructorId);
+      const registeredStudents = semesterRows
+        .filter((row) => row.course._id.toString() === courseId)
+        .map((row) => row.enrollment);
 
       // adding marks for new comers students if any
       for (let i = 0; i < registeredStudents.length; i++) {
@@ -734,10 +735,10 @@ const getAttendances = async (req, res) => {
     if (attendances.length) {
       let attendanceDetails = [];
 
-      const registeredStudents = await registeredCourseSchema.find({
-        instructorId,
-        courseId
-      });
+      const semesterRows = await getInstructorSemesterStudents(instructorId);
+      const registeredStudents = semesterRows
+        .filter((row) => row.course._id.toString() === courseId)
+        .map((row) => row.enrollment);
 
       for (let i = 0; i < attendances.length; i++) {
         const element = attendances[i];

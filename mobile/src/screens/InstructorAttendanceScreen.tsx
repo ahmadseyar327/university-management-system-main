@@ -29,6 +29,7 @@ type Stud = Record<string, unknown> & {
   _id?: string;
   courseId?: string;
   courseTitle?: string;
+  semesterNumber?: number;
   fname?: string;
   lname?: string;
   rollNumber?: unknown;
@@ -46,6 +47,14 @@ type AttDoc = Record<string, unknown> & {
   date?: string;
   courseId?: string;
   attendance?: AttRow[];
+};
+
+type CourseRow = Record<string, unknown> & {
+  _id?: string;
+  title?: string;
+  semesterNumber?: number;
+  programId?: string;
+  status?: string;
 };
 
 type Props = DrawerScreenProps<InstructorTabParamList, "InstructorAttendance">;
@@ -149,6 +158,7 @@ export default function InstructorAttendanceScreen({ navigation }: Props) {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [courseId, setCourseId] = useState("");
   const [students, setStudents] = useState<Stud[]>([]);
+  const [instructorCourses, setInstructorCourses] = useState<CourseRow[]>([]);
   const [doc, setDoc] = useState<AttDoc | null>(null);
   const [rows, setRows] = useState<AttRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -157,19 +167,29 @@ export default function InstructorAttendanceScreen({ navigation }: Props) {
   const [trackW, setTrackW] = useState(0);
 
   const loadStudents = useCallback(async () => {
-    const res = await fetchResponse(courseEndpoints.getStudentsOfInstructor(instructorId), 0, null);
-    if (!res?.success) {
-      toastError(res?.message ?? "Could not load students");
+    const [studentsRes, coursesRes] = await Promise.all([
+      fetchResponse(courseEndpoints.getStudentsOfInstructor(instructorId), 0, null),
+      fetchResponse(courseEndpoints.getCoursesOfInstructor(instructorId), 0, null),
+    ]);
+    if (!studentsRes?.success) {
+      toastError(studentsRes?.message ?? "Could not load students");
       setStudents([]);
-      return;
+    } else {
+      const data = (studentsRes.data as Stud[]) ?? [];
+      setStudents(
+        [...data].map((s) => ({ ...s, courseId: String(s.courseId ?? "") })).sort((a, b) => {
+          const fn = String(a.fname).localeCompare(String(b.fname));
+          return fn !== 0 ? fn : String(a.lname).localeCompare(String(b.lname));
+        })
+      );
     }
-    const data = (res.data as Stud[]) ?? [];
-    setStudents(
-      [...data].sort((a, b) => {
-        const fn = String(a.fname).localeCompare(String(b.fname));
-        return fn !== 0 ? fn : String(a.lname).localeCompare(String(b.lname));
-      })
-    );
+    if (coursesRes?.success) {
+      setInstructorCourses(
+        ((coursesRes.data as CourseRow[]) ?? []).filter((c) => c.status === "approved")
+      );
+    } else {
+      setInstructorCourses([]);
+    }
   }, [instructorId]);
 
   useEffect(() => {
@@ -185,17 +205,15 @@ export default function InstructorAttendanceScreen({ navigation }: Props) {
   }, [loadStudents]);
 
   const courseOptions: SelectOption[] = useMemo(() => {
-    const seen = new Set<string>();
-    return students
-      .filter((s) => {
-        const id = String(s.courseId ?? "");
-        if (!id || seen.has(id)) return false;
-        seen.add(id);
-        return true;
-      })
-      .sort((a, b) => String(a.courseTitle).localeCompare(String(b.courseTitle)))
-      .map((s) => ({ label: String(s.courseTitle ?? ""), value: String(s.courseId ?? "") }));
-  }, [students]);
+    return instructorCourses
+      .sort((a, b) => String(a.title).localeCompare(String(b.title)))
+      .map((c) => ({
+        label: c.semesterNumber
+          ? `Sem ${c.semesterNumber} · ${String(c.title ?? "")}`
+          : String(c.title ?? ""),
+        value: String(c._id ?? ""),
+      }));
+  }, [instructorCourses]);
 
   const buildFreshRows = useCallback(
     (course: string, att: AttDoc | null) => {
@@ -355,6 +373,11 @@ export default function InstructorAttendanceScreen({ navigation }: Props) {
       <View style={[styles.panel, shadow.soft]}>
         <FormTextInput label="Date (YYYY-MM-DD)" value={date} onChangeText={setDate} autoCapitalize="none" />
         <SimpleSelect label="Course" options={courseOptions} value={courseId} onChange={setCourseId} />
+        {!courseOptions.length ? (
+          <Text style={styles.noCoursesHint}>
+            No approved semester courses yet. Ask admin to approve your course offers.
+          </Text>
+        ) : null}
         <View style={styles.modeBanner}>
           <Text style={styles.modeBannerTxt}>
             {doc?._id ? "Editing saved sheet for this date." : "New sheet — will be created on save."}
@@ -412,6 +435,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  noCoursesHint: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    marginTop: spacing.xs,
   },
   modeBanner: {
     marginTop: spacing.sm,

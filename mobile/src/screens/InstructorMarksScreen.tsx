@@ -37,12 +37,21 @@ type MarkRow = {
   finalExamMarks: string;
 };
 
+type CourseRow = Record<string, unknown> & {
+  _id?: string;
+  title?: string;
+  semesterNumber?: number;
+  programId?: string;
+  status?: string;
+};
+
 type Props = DrawerScreenProps<InstructorTabParamList, "InstructorMarks">;
 
 export default function InstructorMarksScreen({ navigation }: Props) {
   const { instructorData } = useAuth();
   const instructorId = mongoId(instructorData);
   const [students, setStudents] = useState<Stud[]>([]);
+  const [instructorCourses, setInstructorCourses] = useState<CourseRow[]>([]);
   const [course, setCourse] = useState("");
   const [programId, setProgramId] = useState("");
   const [semesterNumber, setSemesterNumber] = useState("");
@@ -51,13 +60,28 @@ export default function InstructorMarksScreen({ navigation }: Props) {
   const [busy, setBusy] = useState(false);
 
   const loadStudents = useCallback(async () => {
-    const res = await fetchResponse(courseEndpoints.getStudentsOfInstructor(instructorId), 0, null);
-    if (!res?.success) {
-      toastError(res?.message ?? "Could not load students");
+    const [studentsRes, coursesRes] = await Promise.all([
+      fetchResponse(courseEndpoints.getStudentsOfInstructor(instructorId), 0, null),
+      fetchResponse(courseEndpoints.getCoursesOfInstructor(instructorId), 0, null),
+    ]);
+    if (!studentsRes?.success) {
+      toastError(studentsRes?.message ?? "Could not load students");
       setStudents([]);
-      return;
+    } else {
+      setStudents(
+        ((studentsRes.data as Stud[]) ?? []).map((s) => ({
+          ...s,
+          courseId: String(s.courseId ?? ""),
+        }))
+      );
     }
-    setStudents((res.data as Stud[]) ?? []);
+    if (coursesRes?.success) {
+      setInstructorCourses(
+        ((coursesRes.data as CourseRow[]) ?? []).filter((c) => c.status === "approved")
+      );
+    } else {
+      setInstructorCourses([]);
+    }
   }, [instructorId]);
 
   useEffect(() => {
@@ -69,62 +93,65 @@ export default function InstructorMarksScreen({ navigation }: Props) {
   }, [loadStudents]);
 
   const courseOpts: SelectOption[] = useMemo(() => {
-    const seen = new Set<string>();
-    return students
-      .filter((s) => {
-        const id = String(s.courseId ?? "");
-        if (!id || seen.has(id)) return false;
-        seen.add(id);
-        return true;
-      })
-      .sort((a, b) => String(a.courseTitle).localeCompare(String(b.courseTitle)))
-      .map((s) => ({ label: String(s.courseTitle ?? ""), value: String(s.courseId ?? "") }));
-  }, [students]);
+    return instructorCourses
+      .sort((a, b) => String(a.title).localeCompare(String(b.title)))
+      .map((c) => ({
+        label: c.semesterNumber
+          ? `Sem ${c.semesterNumber} · ${String(c.title ?? "")}`
+          : String(c.title ?? ""),
+        value: String(c._id ?? ""),
+      }));
+  }, [instructorCourses]);
 
   useEffect(() => {
     if (!course) {
       setRows([]);
+      setProgramId("");
+      setSemesterNumber("");
       return;
     }
-    const sample = students.find((s) => String(s.courseId) === course);
-    const prog = String(sample?.programId ?? "");
-    const sem = String(sample?.semesterNumber ?? "");
+    const selected = instructorCourses.find((c) => String(c._id) === course);
+    const prog = String(selected?.programId ?? "");
+    const sem = String(selected?.semesterNumber ?? "");
     setProgramId(prog);
     setSemesterNumber(sem);
 
     void (async () => {
-      if (prog && sem) {
-        const res = await fetchResponse(
-          academicEndpoints.getCourseResultsForInstructor(instructorId, course, Number(sem)),
-          0,
-          null
-        );
-        if (res?.success) {
-          setRows(
-            ((res.data as MarkRow[]) ?? []).map((r) => ({
-              studentId: String(r.studentId),
-              rollNumber: r.rollNumber,
-              name: String(r.name ?? ""),
-              midExamMarks: String(r.midExamMarks ?? 0),
-              finalExamMarks: String(r.finalExamMarks ?? 0),
-            }))
-          );
-          return;
-        }
+      const courseStudents = students
+        .filter((s) => String(s.courseId) === course)
+        .map((s) => ({
+          studentId: mongoId(s),
+          rollNumber: s.rollNumber,
+          name: `${String(s.fname ?? "")} ${String(s.lname ?? "")}`.trim(),
+          midExamMarks: "0",
+          finalExamMarks: "0",
+        }));
+
+      if (!prog || !sem) {
+        setRows(courseStudents);
+        return;
       }
-      setRows(
-        students
-          .filter((s) => String(s.courseId) === course)
-          .map((s) => ({
-            studentId: mongoId(s),
-            rollNumber: s.rollNumber,
-            name: `${String(s.fname ?? "")} ${String(s.lname ?? "")}`.trim(),
-            midExamMarks: "0",
-            finalExamMarks: "0",
-          }))
+
+      const res = await fetchResponse(
+        academicEndpoints.getCourseResultsForInstructor(instructorId, course, Number(sem)),
+        0,
+        null
       );
+      if (res?.success && (res.data as MarkRow[])?.length) {
+        setRows(
+          ((res.data as MarkRow[]) ?? []).map((r) => ({
+            studentId: String(r.studentId),
+            rollNumber: r.rollNumber,
+            name: String(r.name ?? ""),
+            midExamMarks: String(r.midExamMarks ?? 0),
+            finalExamMarks: String(r.finalExamMarks ?? 0),
+          }))
+        );
+      } else {
+        setRows(courseStudents);
+      }
     })();
-  }, [course, instructorId, students]);
+  }, [course, instructorId, students, instructorCourses]);
 
   async function saveMarks() {
     if (!course || !programId || !semesterNumber) {
@@ -163,6 +190,9 @@ export default function InstructorMarksScreen({ navigation }: Props) {
       <FadeInView>
         <View style={[styles.panel, shadow.soft]}>
           <SimpleSelect label="Course" options={courseOpts} value={course} onChange={setCourse} />
+          {!courseOpts.length ? (
+            <Text style={styles.hint}>No approved semester courses yet. Ask admin to approve your offers.</Text>
+          ) : null}
           {semesterNumber ? (
             <Text style={styles.hint}>Semester {semesterNumber} · Pass threshold 55/100</Text>
           ) : null}

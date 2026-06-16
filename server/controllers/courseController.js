@@ -5,6 +5,7 @@ const offeredCourseSchema = require('../models/offeredCourseModel');
 const registeredCourseSchema = require('../models/registeredCourseModel');
 const semesterSchema = require('../models/semesterModel');
 const programSchema = require('../models/programModel');
+const { getInstructorSemesterStudents } = require('../services/enrollmentQueryService');
 
 async function getCourseSemesterContext(course) {
   if (!course?.semesterId) return null;
@@ -18,6 +19,10 @@ async function getCourseSemesterContext(course) {
     programId: semester.programId,
     programName: program?.name ?? '',
   };
+}
+
+function isSemesterCourse(course) {
+  return Boolean(course?.semesterId);
 }
 
 const registerCourse = async (_req, res) => {
@@ -323,21 +328,27 @@ const getOfferedCoursesOfInstructor = async (req, res) => {
       for (let i = 0; i < registeredCourses.length; i++) {
         const element = registeredCourses[i];
         const course = await courseSchema.findById(element.courseId);
-        if (course) {
-          const ctx = await getCourseSemesterContext(course);
-          registeredCoursesDetail.push({
-            ...course._doc,
-            ...ctx,
-            requestId: element._id,
-            status: element.status || 'approved',
-            reviewedAt: element.reviewedAt,
-          });
-        }
+        if (!course || !isSemesterCourse(course)) continue;
+        const ctx = await getCourseSemesterContext(course);
+        if (!ctx) continue;
+        registeredCoursesDetail.push({
+          ...course._doc,
+          ...ctx,
+          requestId: element._id,
+          status: element.status || 'approved',
+          reviewedAt: element.reviewedAt,
+        });
+      }
+      if (!registeredCoursesDetail.length) {
+        return res.status(204).send({
+          success: true,
+          message: 'No semester courses assigned to this instructor.',
+        });
       }
       res.status(200).send({
         success: true,
         message: 'Offered courses of this instructor fetched successfully!',
-        count: registeredCourses.length,
+        count: registeredCoursesDetail.length,
         data: registeredCoursesDetail,
       });
     } else {
@@ -447,36 +458,32 @@ const getOfferedCourses = async (req, res) => {
 const getRegisteredStudentsOfInstructor = async (req, res) => {
   try {
     const id = req.params.id;
-    const registeredStudents = await registeredCourseSchema.find({
-      instructorId: id,
-    });
-    if (registeredStudents.length) {
-      let registeredStudentsDetail = [];
-      for (let i = 0; i < registeredStudents.length; i++) {
-        const element = registeredStudents[i];
-        const student = await studentSchema.findById(element.studentId);
-        const course = await courseSchema.findById(element.courseId);
-        if (student && course)
-          registeredStudentsDetail.push({
-            ...(student._doc),
-            courseTitle: course.title,
-            courseId: course._id,
-            programId: element.programId,
-            semesterNumber: element.semesterNumber,
-          });
-      }
-      res.status(200).send({
+    const semesterRows = await getInstructorSemesterStudents(id);
+
+    if (!semesterRows.length) {
+      return res.status(200).send({
         success: true,
-        message: 'Registered students of this instructor fetched successfully!',
-        count: registeredStudents.length,
-        data: registeredStudentsDetail,
-      });
-    } else {
-      res.status(204).send({
-        success: true,
-        message: 'No registered students of this instructor so far.',
+        message: 'No semester students assigned to this instructor yet.',
+        count: 0,
+        data: [],
       });
     }
+
+    const registeredStudentsDetail = semesterRows.map(({ student, course, ctx, enrollment }) => ({
+      ...student._doc,
+      courseTitle: course.title,
+      courseId: course._id.toString(),
+      programId: ctx.programId,
+      semesterNumber: ctx.semesterNumber,
+      enrollmentType: enrollment.enrollmentType,
+    }));
+
+    res.status(200).send({
+      success: true,
+      message: 'Registered students of this instructor fetched successfully!',
+      count: registeredStudentsDetail.length,
+      data: registeredStudentsDetail,
+    });
   } catch (error) {
     res.status(500).send({
       success: false,

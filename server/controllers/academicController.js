@@ -8,6 +8,7 @@ const semesterSchema = require('../models/semesterModel');
 const programSchema = require('../models/programModel');
 const studentSchema = require('../models/studentModel');
 const { enrollStudentInProgram } = require('../services/studentEnrollmentService');
+const { getStudentSemesterEnrollments } = require('../services/enrollmentQueryService');
 const {
   upsertCourseResult,
   calculateSemesterResult,
@@ -74,14 +75,11 @@ const getStudentDashboard = async (req, res) => {
       semesterNumber: record.currentSemester,
     });
 
-    const enrollments = await registeredCourseSchema.find({
+    const semesterEnrollments = await getStudentSemesterEnrollments(
       studentId,
-      programId: record.programId,
-      semesterNumber: record.currentSemester,
-    });
-
-    const courseIds = enrollments.map((e) => e.courseId);
-    const courses = await courseSchema.find({ _id: { $in: courseIds } });
+      record.programId,
+      record.currentSemester
+    );
 
     const courseResults = await courseResultSchema.find({
       studentId,
@@ -109,18 +107,16 @@ const getStudentDashboard = async (req, res) => {
         semesterTitle: semester?.title,
         status: record.status,
         enrollmentDate: record.enrollmentDate,
-        courses: enrollments.map((enrollment) => {
-          const course = courses.find((c) => c._id.toString() === enrollment.courseId);
-          if (!course) return null;
-          return {
-            id: course._id,
-            name: course.title,
-            code: course.code,
-            description: course.description,
-            isRepeat: enrollment.enrollmentType === 'repeat',
-            repeatFromSemester: enrollment.repeatFromSemester ?? null,
-          };
-        }).filter(Boolean),
+        courses: semesterEnrollments.map(({ course, enrollment, ctx }) => ({
+          id: course._id.toString(),
+          name: course.title,
+          code: course.code,
+          description: course.description,
+          isRepeat: enrollment.enrollmentType === 'repeat',
+          repeatFromSemester: enrollment.repeatFromSemester ?? null,
+          semesterNumber: ctx.semesterNumber,
+          programId: ctx.programId,
+        })),
         results: courseResults,
         semesterResult,
         registrationOpen: Boolean(nextReg),

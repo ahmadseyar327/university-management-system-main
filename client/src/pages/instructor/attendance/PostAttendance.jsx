@@ -17,10 +17,10 @@ import FadeInPanel from '../../../components/academics/FadeInPanel';
 
 export default function PostAttendance() {
   const instructorId = JSON.parse(localStorage.getItem('instructor'))._id;
-  const uniqueCourseIds = {};
 
   const [attendances, setAttendances] = useState([]);
   const [studentsAttendance, setStudentsAttendance] = useState([]);
+  const [instructorCourses, setInstructorCourses] = useState([]);
   const [selectedAttendance, setSelectedAttendance] = useState(null);
   const [temporarySelection, setTemporarySelection] = useState({
     date: moment(Date.now()).format('YYYY-MM-DD'),
@@ -29,7 +29,8 @@ export default function PostAttendance() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchData() {
+    async function fetchAttendance() {
+      if (!temporarySelection.date || !temporarySelection.course) return;
       setIsLoading(true);
       try {
         const res = await fetchResponse(
@@ -52,41 +53,52 @@ export default function PostAttendance() {
         setIsLoading(false);
       }
     }
-    if (temporarySelection.date && temporarySelection.course) fetchData();
+    void fetchAttendance();
+  }, [instructorId, temporarySelection.course, temporarySelection.date]);
 
-    async function fetchStudents() {
+  useEffect(() => {
+    async function fetchStudentsAndCourses() {
+      setIsLoading(true);
       try {
-        const res = await fetchResponse(
-          courseEndpoints.getStudentsOfInstructor(instructorId),
-          0,
-          null
-        );
-        if (!res.success) {
-          toast.error(res.message, toastErrorObject);
-          return;
+        const [studentsRes, coursesRes] = await Promise.all([
+          fetchResponse(courseEndpoints.getStudentsOfInstructor(instructorId), 0, null),
+          fetchResponse(courseEndpoints.getCoursesOfInstructor(instructorId), 0, null),
+        ]);
+        if (!studentsRes?.success) {
+          toast.error(studentsRes?.message ?? 'Could not load students', toastErrorObject);
+          setStudentsAttendance([]);
+        } else {
+          const sortedStudents = (studentsRes.data ?? []).sort((a, b) => {
+            const fnameComparison = a.fname.localeCompare(b.fname);
+            if (fnameComparison !== 0) return fnameComparison;
+            return a.lname.localeCompare(b.lname);
+          });
+          setStudentsAttendance(
+            sortedStudents.map((student) => ({
+              ...student,
+              studentId: student._id,
+              courseId: String(student.courseId ?? ''),
+              name: student.fname + ' ' + student.lname,
+              status: 'P',
+              isPublic: true,
+            }))
+          );
         }
-        const sortedStudents = res.data?.sort((a, b) => {
-          const fnameComparison = a.fname.localeCompare(b.fname);
-          if (fnameComparison !== 0) return fnameComparison;
-          return a.lname.localeCompare(b.lname);
-        });
-        setStudentsAttendance(
-          sortedStudents.map((student) => ({
-            ...student,
-            studentId: student._id,
-            name: student.fname + ' ' + student.lname,
-            status: 'P',
-            isPublic: true,
-          }))
-        );
+        if (coursesRes?.success) {
+          setInstructorCourses(
+            (coursesRes.data ?? []).filter((c) => c.status === 'approved')
+          );
+        } else {
+          setInstructorCourses([]);
+        }
       } catch (error) {
         console.log(error);
       } finally {
         setIsLoading(false);
       }
     }
-    fetchStudents();
-  }, [instructorId, temporarySelection.course, temporarySelection.date]);
+    void fetchStudentsAndCourses();
+  }, [instructorId]);
 
   useEffect(() => {
     if (temporarySelection.date && temporarySelection.course) {
@@ -102,20 +114,15 @@ export default function PostAttendance() {
     }
   }, [attendances, temporarySelection]);
 
-  const courseOptions = studentsAttendance
-    .filter((attendance) => {
-      const courseId = attendance.courseId;
-      if (!uniqueCourseIds[courseId]) {
-        uniqueCourseIds[courseId] = true;
-        return true;
-      }
-      return false;
-    })
-    .sort((a, b) => a.courseTitle.localeCompare(b.courseTitle))
-    .map((attendance) => ({
-      value: attendance.courseId,
-      title: attendance.courseTitle,
-    }));
+  const courseOptions = instructorCourses
+    .sort((a, b) => String(a.title).localeCompare(String(b.title)))
+    .map((course) => ({
+      value: String(course._id ?? ''),
+      title: course.semesterNumber
+        ? `Sem ${course.semesterNumber} · ${course.title}`
+        : String(course.title ?? 'Course'),
+    }))
+    .filter((opt) => opt.value);
 
   const courseTitle =
     courseOptions.find((c) => c.value === temporarySelection.course)?.title || '';

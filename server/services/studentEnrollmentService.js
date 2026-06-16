@@ -5,6 +5,7 @@ const registeredCourseSchema = require('../models/registeredCourseModel');
 const semesterSchema = require('../models/semesterModel');
 const studentAcademicRecordSchema = require('../models/studentAcademicRecordModel');
 const { STUDENT_STATUS, TOTAL_SEMESTERS } = require('../utils/academicRules');
+const { idsMatch, normalizeId, normalizeSemester, semestersMatch } = require('../utils/enrollmentHelpers');
 
 async function getEnrollmentBlockMessage(existing, requestedProgramId) {
   const enrolledProgram = await programSchema.findById(existing.programId);
@@ -32,12 +33,14 @@ async function findApprovedInstructor(courseId) {
 }
 
 async function assignSemesterCourses(studentId, programId, semesterNumber) {
+  const pid = normalizeId(programId);
+  const sem = normalizeSemester(semesterNumber);
   const record = await studentAcademicRecordSchema.findOne({ studentId });
-  if (!record || record.programId !== programId) {
+  if (!record || !idsMatch(record.programId, pid)) {
     return { assigned: [], skipped: [], message: 'Student is not enrolled in this program.' };
   }
 
-  const { semester, courses } = await getSemesterCourses(programId, semesterNumber);
+  const { semester, courses } = await getSemesterCourses(pid, sem);
   if (!semester) {
     return { assigned: [], skipped: [], message: 'Semester not found.' };
   }
@@ -54,9 +57,20 @@ async function assignSemesterCourses(studentId, programId, semesterNumber) {
       continue;
     }
 
-    const exists = await registeredCourseSchema.findOne({ studentId, courseId, semesterNumber });
-    if (exists) {
-      skipped.push({ courseId, title: course.title, reason: 'Already enrolled this semester' });
+    const existingRow = await registeredCourseSchema.findOne({ studentId, courseId });
+    if (existingRow) {
+      if (idsMatch(existingRow.programId, pid) && semestersMatch(existingRow.semesterNumber, sem)) {
+        skipped.push({ courseId, title: course.title, reason: 'Already enrolled this semester' });
+        continue;
+      }
+
+      await registeredCourseSchema.findByIdAndUpdate(existingRow._id, {
+        programId: pid,
+        semesterNumber: sem,
+        instructorId,
+        enrollmentType: existingRow.enrollmentType || 'semester_auto',
+      });
+      assigned.push({ courseId, title: course.title, instructorId, upgraded: true });
       continue;
     }
 
@@ -64,14 +78,14 @@ async function assignSemesterCourses(studentId, programId, semesterNumber) {
       studentId,
       courseId,
       instructorId,
-      programId,
-      semesterNumber,
+      programId: pid,
+      semesterNumber: sem,
       enrollmentType: 'semester_auto',
     });
     assigned.push({ courseId, title: course.title, instructorId });
   }
 
-  return { assigned, skipped, semesterNumber, programId };
+  return { assigned, skipped, semesterNumber: sem, programId: pid };
 }
 
 async function enrollStudentInProgram(studentId, programId) {

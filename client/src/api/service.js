@@ -42,6 +42,9 @@ export async function fetchResponse(url, type, bodyData) {
   }
   try {
     const res = await fetch(url, options);
+    if (res.status === 204) {
+      return { success: true, message: '', data: [] };
+    }
     if (!res.ok) {
       console.log("Network response was not OK.");
     } else {
