@@ -87,7 +87,7 @@ const getSingleCourse = async (req, res) => {
 const editCourse = async (req, res) => {
   try {
     const id = req.params.id;
-    const { title, creditHours, fee, type, code } = req.body;
+    const { title, creditHours, type, code } = req.body;
 
     const course = await courseSchema.findById(id);
     if (!course) {
@@ -103,11 +103,6 @@ const editCourse = async (req, res) => {
         return res.status(400).send({
           success: false,
           message: 'Title cannot be empty!',
-        });
-      case !fee:
-        return res.status(400).send({
-          success: false,
-          message: 'Fee cannot be empty!',
         });
       case !type:
         return res.status(400).send({
@@ -129,7 +124,6 @@ const editCourse = async (req, res) => {
       {
         title,
         creditHours: creditHours ? creditHours : 1,
-        fee,
         type,
         code,
       },

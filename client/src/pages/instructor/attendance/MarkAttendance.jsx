@@ -51,7 +51,7 @@ export default function MarkAttendance({ data, date, courseId, instructorId }) {
       <div className="academics-session-banner">
         <span>📅</span>
         <span>
-          Session <strong>{date}</strong> · {attendanceData.length} students
+          Session <strong>{date}</strong> · {attendanceData.length} students · max 16 sessions per course
         </span>
       </div>
       <PrimaryButton onClick={postAttendance} className="w-full mb-4">

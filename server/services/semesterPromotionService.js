@@ -8,13 +8,16 @@ const semesterSchema = require('../models/semesterModel');
 const {
   computeCourseResult,
   computeSemesterResult,
+  evaluateCoursePass,
+  canPromoteAfterSemester,
   STUDENT_STATUS,
   SEMESTER_RESULT,
   TOTAL_SEMESTERS,
 } = require('../utils/academicRules');
+const { countStudentAbsences } = require('./attendanceService');
 const {
   assignSemesterCourses,
-  repeatSemesterCourses,
+  assignFailedCourseRepeats,
 } = require('./studentEnrollmentService');
 
 async function upsertCourseResult(payload) {
@@ -37,6 +40,50 @@ async function upsertCourseResult(payload) {
   return result;
 }
 
+async function evaluateStudentCourseResults(studentId, programId, semesterNumber) {
+  const enrollments = await registeredCourseSchema.find({
+    studentId,
+    programId,
+    semesterNumber,
+  });
+
+  const evaluated = [];
+
+  for (const enrollment of enrollments) {
+    const existing = await courseResultSchema.findOne({
+      studentId,
+      courseId: enrollment.courseId,
+      semesterNumber,
+    });
+
+    if (!existing) continue;
+
+    const absences = await countStudentAbsences(studentId, enrollment.courseId, semesterNumber);
+    const evaluation = evaluateCoursePass(
+      existing.midExamMarks,
+      existing.finalExamMarks,
+      absences
+    );
+
+    const updated = await courseResultSchema.findByIdAndUpdate(
+      existing._id,
+      {
+        midExamMarks: evaluation.midExamMarks,
+        finalExamMarks: evaluation.finalExamMarks,
+        totalMarks: evaluation.totalMarks,
+        passFailStatus: evaluation.passFailStatus,
+        absenceCount: evaluation.absenceCount,
+        failReason: evaluation.failReason,
+      },
+      { new: true }
+    );
+
+    evaluated.push(updated);
+  }
+
+  return evaluated;
+}
+
 async function calculateSemesterResult(studentId, programId, semesterNumber) {
   const semester = await semesterSchema.findOne({ programId, semesterNumber });
   if (!semester) return null;
@@ -44,20 +91,22 @@ async function calculateSemesterResult(studentId, programId, semesterNumber) {
   const courses = await courseSchema.find({ semesterId: semester._id.toString() });
   const courseIds = courses.map((c) => c._id.toString());
 
-  const results = await courseResultSchema.find({
-    studentId,
-    programId,
-    semesterNumber,
-    courseId: { $in: courseIds },
-  });
-
   const enrolled = await registeredCourseSchema.find({
     studentId,
     programId,
     semesterNumber,
   });
 
+  const enrolledCourseIds = enrolled.map((e) => e.courseId);
   const requiredCount = enrolled.length || courseIds.length;
+
+  const results = await courseResultSchema.find({
+    studentId,
+    programId,
+    semesterNumber,
+    courseId: { $in: enrolledCourseIds.length ? enrolledCourseIds : courseIds },
+  });
+
   const hasAllResults = results.length >= requiredCount && requiredCount > 0;
 
   const semesterOutcome = hasAllResults
@@ -74,11 +123,6 @@ async function calculateSemesterResult(studentId, programId, semesterNumber) {
 }
 
 async function publishSemesterResults(adminId, programId, semesterNumber) {
-  await courseResultSchema.updateMany(
-    { programId, semesterNumber },
-    { isPublished: true }
-  );
-
   const students = await studentAcademicRecordSchema.find({
     programId,
     currentSemester: semesterNumber,
@@ -86,6 +130,8 @@ async function publishSemesterResults(adminId, programId, semesterNumber) {
 
   const updates = [];
   for (const record of students) {
+    await evaluateStudentCourseResults(record.studentId, programId, semesterNumber);
+
     const { semesterResult, hasAllResults } = await calculateSemesterResult(
       record.studentId,
       programId,
@@ -93,6 +139,11 @@ async function publishSemesterResults(adminId, programId, semesterNumber) {
     );
 
     if (!hasAllResults) continue;
+
+    await courseResultSchema.updateMany(
+      { studentId: record.studentId, programId, semesterNumber },
+      { isPublished: true }
+    );
 
     await semesterResultSchema.findByIdAndUpdate(semesterResult._id, {
       isPublished: true,
@@ -111,8 +162,16 @@ async function publishSemesterResults(adminId, programId, semesterNumber) {
           status: STUDENT_STATUS.READY_FOR_REGISTRATION,
         });
       }
-    } else if (semesterResult.result === SEMESTER_RESULT.FAILED) {
-      await handleFailedSemester(record.studentId, programId, semesterNumber);
+    } else if (semesterResult.result === SEMESTER_RESULT.COMPLETED_WITH_REPEATS) {
+      if (semesterNumber >= TOTAL_SEMESTERS) {
+        await studentAcademicRecordSchema.findByIdAndUpdate(record._id, {
+          status: STUDENT_STATUS.ACTIVE,
+        });
+      } else {
+        await studentAcademicRecordSchema.findByIdAndUpdate(record._id, {
+          status: STUDENT_STATUS.READY_FOR_REGISTRATION,
+        });
+      }
     }
 
     updates.push({
@@ -180,16 +239,17 @@ async function confirmStudentPromotion(studentId) {
     studentId,
     programId: record.programId,
     semesterNumber: record.currentSemester,
-    result: SEMESTER_RESULT.PASSED,
     isPublished: true,
   });
 
-  if (!lastSemesterResult) {
+  if (!canPromoteAfterSemester(lastSemesterResult)) {
     return {
       success: false,
-      message: 'Previous semester results must be published and passed.',
+      message: 'Previous semester results must be published before promotion.',
     };
   }
+
+  const previousSemester = record.currentSemester;
 
   await studentAcademicRecordSchema.findByIdAndUpdate(record._id, {
     currentSemester: nextSemester,
@@ -197,12 +257,25 @@ async function confirmStudentPromotion(studentId) {
   });
 
   const assignment = await assignSemesterCourses(studentId, record.programId, nextSemester);
+  const repeats = await assignFailedCourseRepeats(
+    studentId,
+    record.programId,
+    previousSemester,
+    nextSemester
+  );
+
+  const repeatCount = repeats.assigned?.length ?? 0;
+  const message =
+    repeatCount > 0
+      ? `Promoted to semester ${nextSemester}. ${repeatCount} failed course(s) added for repeat study.`
+      : `Promoted to semester ${nextSemester}.`;
 
   return {
     success: true,
-    message: `Promoted to semester ${nextSemester}.`,
+    message,
     currentSemester: nextSemester,
     assignment,
+    repeats,
   };
 }
 
@@ -211,11 +284,12 @@ async function handleFailedSemester(studentId, programId, semesterNumber) {
     { studentId },
     { status: STUDENT_STATUS.ACTIVE, currentSemester: semesterNumber }
   );
-  return repeatSemesterCourses(studentId, programId, semesterNumber);
+  return assignFailedCourseRepeats(studentId, programId, semesterNumber, semesterNumber);
 }
 
 module.exports = {
   upsertCourseResult,
+  evaluateStudentCourseResults,
   calculateSemesterResult,
   publishSemesterResults,
   openSemesterRegistration,

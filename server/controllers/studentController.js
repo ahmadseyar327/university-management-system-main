@@ -4,6 +4,8 @@ const courseSchema = require("../models/courseModel");
 const academicSchema = require("../models/academicModel");
 const attendanceSchema = require("../models/attendanceModel");
 const registeredCourseSchema = require("../models/registeredCourseModel");
+const { countStudentAbsences } = require("../services/attendanceService");
+const { ATTENDANCE_TOTAL_DAYS, MAX_ABSENCES_BEFORE_FAIL } = require("../utils/academicRules");
 
 const registerStudent = async (req, res) => {
   try {
@@ -393,12 +395,18 @@ const getAttendances = async (req, res) => {
   try {
     const { studentId, courseId } = req.query;
 
-    const attendances = await attendanceSchema
-      .find({
-        attendance: { $elemMatch: { studentId } },
-        courseId,
-      })
-      .select("date attendance _id");
+    const enrollment = await registeredCourseSchema.findOne({ studentId, courseId });
+    const semesterNumber = enrollment?.semesterNumber;
+
+    const query = {
+      attendance: { $elemMatch: { studentId } },
+      courseId,
+    };
+    if (semesterNumber != null) {
+      query.semesterNumber = semesterNumber;
+    }
+
+    const attendances = await attendanceSchema.find(query).select("date attendance _id semesterNumber");
 
     if (attendances.length) {
       let attendanceDetails = [];
@@ -406,7 +414,6 @@ const getAttendances = async (req, res) => {
       for (let i = 0; i < attendances.length; i++) {
         const element = attendances[i];
 
-        // fetching the required records only
         const requiredStudentAttendance = element.attendance.find(
           (record) => record.studentId === studentId
         );
@@ -421,11 +428,20 @@ const getAttendances = async (req, res) => {
           });
       }
       if (attendanceDetails.length) {
+        const absences = await countStudentAbsences(studentId, courseId, semesterNumber);
         res.status(200).send({
           success: true,
           message: "Attendances fetched successfully!",
           count: attendanceDetails.length,
           data: attendanceDetails,
+          summary: {
+            totalSessions: attendanceDetails.length,
+            maxSessions: ATTENDANCE_TOTAL_DAYS,
+            absences,
+            maxAbsences: MAX_ABSENCES_BEFORE_FAIL,
+            attendanceFailed: absences > MAX_ABSENCES_BEFORE_FAIL,
+            isRepeat: enrollment?.enrollmentType === "repeat",
+          },
         });
       } else {
         res.status(404).send({

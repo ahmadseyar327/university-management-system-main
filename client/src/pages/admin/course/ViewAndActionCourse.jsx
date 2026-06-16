@@ -75,7 +75,6 @@ export default function ViewAndActionCourse() {
             'Code',
             'Type',
             'Credit Hours',
-            'Fee',
             'Registration Date',
             'Action',
           ]}
@@ -85,7 +84,6 @@ export default function ViewAndActionCourse() {
             'code',
             'type',
             'creditHours',
-            'fee',
             'createdAt',
             'action',
           ]}

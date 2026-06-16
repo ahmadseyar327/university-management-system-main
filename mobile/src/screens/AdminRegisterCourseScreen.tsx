@@ -23,7 +23,7 @@ function delay(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));
 }
 
-export default function AdminRegisterCourseScreen({ navigation }: Props) {
+export default function AdminRegisterCourseScreen(_props: Props) {
   const { adminData } = useAuth();
   const adminId = mongoId(adminData);
   const [programs, setPrograms] = useState<Record<string, unknown>[]>([]);
@@ -33,7 +33,6 @@ export default function AdminRegisterCourseScreen({ navigation }: Props) {
   const [title, setTitle] = useState("");
   const [code, setCode] = useState("");
   const [type, setType] = useState("Core");
-  const [fee, setFee] = useState("");
   const [creditHours, setCreditHours] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
@@ -81,8 +80,8 @@ export default function AdminRegisterCourseScreen({ navigation }: Props) {
   async function submit() {
     Keyboard.dismiss();
     await delay(Platform.OS === "web" ? 0 : 120);
-    if (!semesterId || !title.trim() || !code.trim() || !fee || !creditHours) {
-      toastError("Fill program, semester, title, code, fee, and credit hours.");
+    if (!semesterId || !title.trim() || !code.trim() || !creditHours) {
+      toastError("Fill program, semester, title, code, and credit hours.");
       return;
     }
     setLoading(true);
@@ -93,7 +92,6 @@ export default function AdminRegisterCourseScreen({ navigation }: Props) {
         code: code.trim(),
         description: description.trim(),
         type,
-        fee: Number(fee),
         creditHours: Number(creditHours),
         adminId,
       });
@@ -115,7 +113,6 @@ export default function AdminRegisterCourseScreen({ navigation }: Props) {
       <ScreenHeader
         title="Add semester course"
         subtitle="Courses belong to a program semester."
-        onBack={() => navigation.goBack()}
       />
 
       <View style={[styles.panel, shadow.soft]}>
@@ -124,7 +121,6 @@ export default function AdminRegisterCourseScreen({ navigation }: Props) {
         <FormTextInput label="Title" value={title} onChangeText={setTitle} />
         <FormTextInput label="Code" value={code} onChangeText={setCode} autoCapitalize="characters" />
         <SimpleSelect label="Type" options={typeOpts} value={type} onChange={setType} />
-        <FormTextInput label="Fee" value={fee} onChangeText={setFee} keyboardType="decimal-pad" />
         <FormTextInput label="Credit hours" value={creditHours} onChangeText={setCreditHours} keyboardType="numeric" />
         <FormTextInput label="Description" value={description} onChangeText={setDescription} multiline />
         <PrimaryButton title="Add to semester" loading={loading} onPress={() => void submit()} />

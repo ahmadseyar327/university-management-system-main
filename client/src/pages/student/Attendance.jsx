@@ -31,6 +31,7 @@ export default function Attendance() {
   const [attendanceData, setAttendanceData] = useState([]);
   const [courses, setCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState('');
+  const [attendanceSummary, setAttendanceSummary] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -75,12 +76,14 @@ export default function Attendance() {
       );
       if (!res.success) {
         toast.error(res.message, toastErrorObject);
+        setAttendanceSummary(null);
         return;
       }
       const sortedAttendances = res.data?.sort(
         (a, b) => new Date(b.date) - new Date(a.date)
       );
       setAttendanceData(sortedAttendances);
+      setAttendanceSummary(res.summary ?? null);
     } catch (error) {
       console.log(error);
     } finally {
@@ -124,12 +127,37 @@ export default function Attendance() {
             value={selectedCourse}
             onChange={(event) => {
               setAttendanceData([]);
+              setAttendanceSummary(null);
               setSelectedCourse(event.target.value);
               handleFetchAttendances(event.target.value);
             }}
           />
         </AcademicsFilterPanel>
       </FadeInPanel>
+
+      {selectedCourse && attendanceSummary ? (
+        <FadeInPanel delay={20}>
+          <ContentCard
+            title="Attendance summary"
+            subtitle={`${attendanceSummary.totalSessions ?? 0} of ${attendanceSummary.maxSessions ?? 16} sessions recorded`}
+            className="mb-4"
+          >
+            <p className="text-sm text-slate-600 mb-2">
+              Absences: {attendanceSummary.absences ?? 0} / {attendanceSummary.maxAbsences ?? 6} allowed
+              {attendanceSummary.isRepeat ? ' · Repeat course' : ''}
+            </p>
+            {attendanceSummary.attendanceFailed ? (
+              <p className="text-sm font-semibold text-red-600">
+                More than 6 absences — this course will be marked failed and must be repeated.
+              </p>
+            ) : (
+              <p className="text-sm text-slate-500">
+                More than 6 absences in a semester fails the course.
+              </p>
+            )}
+          </ContentCard>
+        </FadeInPanel>
+      ) : null}
 
       {selectedCourse && attendanceData.length > 0 ? (
         <FadeInPanel delay={40}>

@@ -27,8 +27,13 @@ const registeredCourseSchema = new mongoose.Schema(
     },
     enrollmentType: {
       type: String,
-      enum: ["semester_auto", "manual"],
+      enum: ["semester_auto", "manual", "repeat"],
       default: "manual",
+    },
+    repeatFromSemester: {
+      type: Number,
+      min: 1,
+      max: 8,
     },
   },
   { timestamps: true }

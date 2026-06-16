@@ -19,6 +19,14 @@ import { mongoId } from "../utils/mongoId";
 import { toastError } from "../utils/toasts";
 
 type CourseOpt = { courseId: string; title: string; instructor: string };
+type AttSummary = {
+  totalSessions?: number;
+  maxSessions?: number;
+  absences?: number;
+  maxAbsences?: number;
+  attendanceFailed?: boolean;
+  isRepeat?: boolean;
+};
 type AttRow = Record<string, unknown>;
 
 type Props = DrawerScreenProps<StudentTabParamList, "StudentAttendance">;
@@ -40,6 +48,7 @@ export default function StudentAttendanceScreen({ navigation }: Props) {
   const [courses, setCourses] = useState<CourseOpt[]>([]);
   const [courseId, setCourseId] = useState("");
   const [rows, setRows] = useState<AttRow[]>([]);
+  const [summary, setSummary] = useState<AttSummary | null>(null);
   const [loadingMeta, setLoadingMeta] = useState(true);
   const [loadingAtt, setLoadingAtt] = useState(false);
 
@@ -73,6 +82,7 @@ export default function StudentAttendanceScreen({ navigation }: Props) {
   const loadAtt = useCallback(async () => {
     if (!courseId) {
       setRows([]);
+      setSummary(null);
       return;
     }
     setLoadingAtt(true);
@@ -80,6 +90,7 @@ export default function StudentAttendanceScreen({ navigation }: Props) {
     if (!res?.success) {
       toastError(res?.message ?? "Could not load attendance");
       setRows([]);
+      setSummary(null);
     } else {
       const data = (res.data as AttRow[]) ?? [];
       setRows(
@@ -89,6 +100,7 @@ export default function StudentAttendanceScreen({ navigation }: Props) {
           return db - da;
         })
       );
+      setSummary((res as { summary?: AttSummary }).summary ?? null);
     }
     setLoadingAtt(false);
   }, [courseId, studentId]);
@@ -102,7 +114,7 @@ export default function StudentAttendanceScreen({ navigation }: Props) {
     value: c.courseId,
   }));
 
-  const summary = rows.reduce<{ p: number; a: number; l: number }>(
+  const counts = rows.reduce<{ p: number; a: number; l: number }>(
     (acc, row) => {
       const s = String(row.attendance ?? "").toUpperCase();
       if (s.startsWith("P")) acc.p += 1;
@@ -126,17 +138,38 @@ export default function StudentAttendanceScreen({ navigation }: Props) {
         </View>
       </FadeInView>
 
+      {courseId && summary ? (
+        <FadeInView delay={40}>
+          <View style={[styles.panel, shadow.soft]}>
+            <Text style={styles.step}>
+              {summary.totalSessions ?? 0} / {summary.maxSessions ?? 16} sessions
+            </Text>
+            <Text style={styles.metaLine}>
+              Absences: {summary.absences ?? 0} / {summary.maxAbsences ?? 6} allowed
+              {summary.isRepeat ? " · Repeat course" : ""}
+            </Text>
+            {summary.attendanceFailed ? (
+              <Text style={styles.warn}>
+                More than 6 absences — course will fail and must be repeated.
+              </Text>
+            ) : (
+              <Text style={styles.metaLine}>More than 6 absences fails the course.</Text>
+            )}
+          </View>
+        </FadeInView>
+      ) : null}
+
       {courseId && rows.length > 0 ? (
         <FadeInView delay={60}>
           <View style={styles.summary}>
             <View style={[styles.pill, styles.pillP]}>
-              <Text style={styles.pillTxtP}>P {summary.p}</Text>
+              <Text style={styles.pillTxtP}>P {counts.p}</Text>
             </View>
             <View style={[styles.pill, styles.pillA]}>
-              <Text style={styles.pillTxtA}>A {summary.a}</Text>
+              <Text style={styles.pillTxtA}>A {counts.a}</Text>
             </View>
             <View style={[styles.pill, styles.pillL]}>
-              <Text style={styles.pillTxtL}>L {summary.l}</Text>
+              <Text style={styles.pillTxtL}>L {counts.l}</Text>
             </View>
             <Text style={styles.count}>{rows.length} sessions</Text>
           </View>
@@ -226,6 +259,8 @@ const styles = StyleSheet.create({
   pillTxtA: { fontSize: 12, fontWeight: "700", color: colors.danger },
   pillTxtL: { fontSize: 12, fontWeight: "700", color: colors.warning },
   count: { marginLeft: "auto", fontSize: 12, color: colors.textSecondary, fontWeight: "600" },
+  metaLine: { fontSize: 13, color: colors.textSecondary, marginTop: 4 },
+  warn: { fontSize: 13, color: colors.danger, fontWeight: "700", marginTop: 6 },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.md,

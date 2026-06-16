@@ -121,9 +121,9 @@ export default function InstructorCourses() {
       >
         <DynamicTable
           variant="instructor"
-          headers={['Title', 'Code', 'Program', 'Semester', 'Type', 'Fee']}
+          headers={['Title', 'Code', 'Program', 'Semester', 'Type']}
           data={activeCourses}
-          dataAttributes={['title', 'code', 'programName', 'semesterNumber', 'type', 'fee']}
+          dataAttributes={['title', 'code', 'programName', 'semesterNumber', 'type']}
         />
       </ContentCard>
     </InstructorLayout>

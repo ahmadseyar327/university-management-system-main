@@ -54,9 +54,9 @@ async function assignSemesterCourses(studentId, programId, semesterNumber) {
       continue;
     }
 
-    const exists = await registeredCourseSchema.findOne({ studentId, courseId });
+    const exists = await registeredCourseSchema.findOne({ studentId, courseId, semesterNumber });
     if (exists) {
-      skipped.push({ courseId, title: course.title, reason: 'Already enrolled' });
+      skipped.push({ courseId, title: course.title, reason: 'Already enrolled this semester' });
       continue;
     }
 
@@ -116,9 +116,66 @@ async function repeatSemesterCourses(studentId, programId, semesterNumber) {
     studentId,
     programId,
     semesterNumber,
-    enrollmentType: 'semester_auto',
+    enrollmentType: { $in: ['semester_auto', 'repeat'] },
   });
   return assignSemesterCourses(studentId, programId, semesterNumber);
+}
+
+async function assignFailedCourseRepeats(studentId, programId, fromSemester, toSemester) {
+  const courseResultSchema = require('../models/courseResultModel');
+  const { PASS_FAIL } = require('../utils/academicRules');
+
+  const failedResults = await courseResultSchema.find({
+    studentId,
+    programId,
+    semesterNumber: fromSemester,
+    isPublished: true,
+    passFailStatus: PASS_FAIL.FAIL,
+  });
+
+  const assigned = [];
+  const skipped = [];
+
+  for (const result of failedResults) {
+    const courseId = result.courseId;
+    const instructorId = await findApprovedInstructor(courseId);
+
+    if (!instructorId) {
+      skipped.push({ courseId, reason: 'No approved instructor for repeat course' });
+      continue;
+    }
+
+    const exists = await registeredCourseSchema.findOne({
+      studentId,
+      courseId,
+      semesterNumber: toSemester,
+    });
+
+    if (exists) {
+      skipped.push({ courseId, reason: 'Repeat already scheduled' });
+      continue;
+    }
+
+    const course = await courseSchema.findById(courseId);
+    await registeredCourseSchema.create({
+      studentId,
+      courseId,
+      instructorId,
+      programId,
+      semesterNumber: toSemester,
+      enrollmentType: 'repeat',
+      repeatFromSemester: fromSemester,
+    });
+
+    assigned.push({
+      courseId,
+      title: course?.title,
+      instructorId,
+      repeatFromSemester: fromSemester,
+    });
+  }
+
+  return { assigned, skipped, fromSemester, toSemester };
 }
 
 module.exports = {
@@ -126,5 +183,6 @@ module.exports = {
   assignSemesterCourses,
   enrollStudentInProgram,
   repeatSemesterCourses,
+  assignFailedCourseRepeats,
   TOTAL_SEMESTERS,
 };

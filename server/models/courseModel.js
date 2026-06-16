@@ -10,10 +10,6 @@ const courseSchema = new mongoose.Schema(
     creditHours: {
       type: Number,
     },
-    fee: {
-      type: Number,
-      required: true,
-    },
     type: {
       type: String,
       required: true,

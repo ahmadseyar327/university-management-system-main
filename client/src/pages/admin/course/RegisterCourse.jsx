@@ -17,7 +17,6 @@ export default function RegisterCourse() {
     title: '',
     code: '',
     type: '',
-    fee: '',
     creditHours: '',
   });
   const [isLoading, setIsLoading] = useState(false);

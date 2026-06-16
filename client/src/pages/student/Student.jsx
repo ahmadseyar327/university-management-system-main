@@ -53,7 +53,8 @@ export default function Student() {
   const showPromotion =
     dashboard?.status === 'Ready For Registration' &&
     dashboard?.registrationOpen &&
-    dashboard?.promotionStatus === 'PASSED SEMESTER';
+    (dashboard?.promotionStatus === 'PASSED SEMESTER' ||
+      dashboard?.promotionStatus === 'COMPLETED WITH REPEATS');
 
   return (
     <StudentLayout>

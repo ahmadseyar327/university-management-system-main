@@ -136,7 +136,7 @@ const updateSemester = async (req, res) => {
 
 const addCourseToSemester = async (req, res) => {
   try {
-    const { semesterId, title, code, description, type, fee, creditHours, adminId } = req.body;
+    const { semesterId, title, code, description, type, creditHours, adminId } = req.body;
 
     if (!semesterId || !title || !code) {
       return res.status(400).send({
@@ -153,11 +153,7 @@ const addCourseToSemester = async (req, res) => {
       });
     }
 
-    const parsedFee = Number(fee);
     const parsedCreditHours = Number(creditHours);
-    if (Number.isNaN(parsedFee) || parsedFee < 0) {
-      return res.status(400).send({ success: false, message: 'Valid fee is required.' });
-    }
     if (Number.isNaN(parsedCreditHours) || parsedCreditHours < 1) {
       return res.status(400).send({ success: false, message: 'Valid credit hours are required.' });
     }
@@ -177,7 +173,6 @@ const addCourseToSemester = async (req, res) => {
       code: code.trim(),
       description: description || '',
       type: type || 'Core',
-      fee: parsedFee,
       creditHours: parsedCreditHours,
       adminId: resolvedAdminId,
       semesterId: semester._id.toString(),

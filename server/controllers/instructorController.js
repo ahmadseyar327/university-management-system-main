@@ -4,6 +4,12 @@ const courseSchema = require('../models/courseModel');
 const academicSchema = require('../models/academicModel');
 const attendanceSchema = require('../models/attendanceModel');
 const registeredCourseSchema = require('../models/registeredCourseModel');
+const {
+  validateNewAttendanceSession,
+  countAttendanceSessions,
+  resolveSemesterNumberForCourse,
+} = require('../services/attendanceService');
+const { ATTENDANCE_TOTAL_DAYS } = require('../utils/academicRules');
 
 const registerInstructor = async (req, res) => {
   try {
@@ -609,20 +615,35 @@ const postAttendance = async (req, res) => {
         break;
     }
 
-    // posting attendance
+    const validation = await validateNewAttendanceSession({
+      courseId,
+      instructorId,
+      date,
+    });
+
+    if (!validation.ok) {
+      return res.status(400).send({
+        success: false,
+        message: validation.message,
+      });
+    }
+
     const newAttendance = new attendanceSchema({
       date,
       attendance,
       instructorId,
       courseId,
+      semesterNumber: validation.semesterNumber,
     });
     const result = await newAttendance.save();
 
     if (result) {
       res.status(200).send({
         success: true,
-        message: 'Attendance posted successfully!',
+        message: `Attendance posted successfully! Session ${validation.sessionCount + 1} of ${ATTENDANCE_TOTAL_DAYS}.`,
         data: result,
+        sessionsUsed: validation.sessionCount + 1,
+        sessionsRemaining: validation.sessionsRemaining - 1,
       });
     } else {
       res.status(500).send({
@@ -758,17 +779,35 @@ const getAttendances = async (req, res) => {
         };
         attendanceDetails.push(attendanceDetail);
       }
+      const semesterNumber = await resolveSemesterNumberForCourse(courseId, instructorId);
+      const sessionsUsed = await countAttendanceSessions(courseId, instructorId, semesterNumber);
+
       res.status(200).send({
         success: true,
         message: 'Attendances fetched successfully!',
         count: attendances.length,
         data: attendanceDetails,
+        meta: {
+          sessionsUsed,
+          sessionsTotal: ATTENDANCE_TOTAL_DAYS,
+          sessionsRemaining: Math.max(0, ATTENDANCE_TOTAL_DAYS - sessionsUsed),
+          semesterNumber,
+        },
       });
     } else {
+      const semesterNumber = await resolveSemesterNumberForCourse(courseId, instructorId);
+      const sessionsUsed = await countAttendanceSessions(courseId, instructorId, semesterNumber);
+
       res.status(404).send({
         success: true,
         message: 'Attendances against this instructor not found.',
-        data: []
+        data: [],
+        meta: {
+          sessionsUsed,
+          sessionsTotal: ATTENDANCE_TOTAL_DAYS,
+          sessionsRemaining: Math.max(0, ATTENDANCE_TOTAL_DAYS - sessionsUsed),
+          semesterNumber,
+        },
       });
     }
   } catch (error) {

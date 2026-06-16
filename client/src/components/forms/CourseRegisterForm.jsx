@@ -27,37 +27,20 @@ export default function CourseRegisterForm({
             required
           />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="auth-field">
-            <label className={labelClass}>Credit Hours</label>
-            <input
-              className={inputClass}
-              type="number"
-              value={registrationDetails.creditHours}
-              onChange={(event) =>
-                setRegistrationDetails({
-                  ...registrationDetails,
-                  creditHours: event.target.value,
-                })
-              }
-              required
-            />
-          </div>
-          <div className="auth-field">
-            <label className={labelClass}>Fee</label>
-            <input
-              className={inputClass}
-              type="number"
-              value={registrationDetails.fee}
-              onChange={(event) =>
-                setRegistrationDetails({
-                  ...registrationDetails,
-                  fee: event.target.value,
-                })
-              }
-              required
-            />
-          </div>
+        <div className="auth-field">
+          <label className={labelClass}>Credit Hours</label>
+          <input
+            className={inputClass}
+            type="number"
+            value={registrationDetails.creditHours}
+            onChange={(event) =>
+              setRegistrationDetails({
+                ...registrationDetails,
+                creditHours: event.target.value,
+              })
+            }
+            required
+          />
         </div>
         <div className="auth-field">
           <SelectField
@@ -124,19 +107,6 @@ export default function CourseRegisterForm({
           setRegistrationDetails({
             ...registrationDetails,
             creditHours: event.target.value,
-          })
-        }
-        required
-      />
-      <label className="form-label">Fee</label>
-      <input
-        className="form-control mb-4"
-        type="number"
-        value={registrationDetails.fee}
-        onChange={(event) =>
-          setRegistrationDetails({
-            ...registrationDetails,
-            fee: event.target.value,
           })
         }
         required

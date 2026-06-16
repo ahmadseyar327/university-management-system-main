@@ -17,6 +17,11 @@ const courseResultSchema = new mongoose.Schema(
       default: PASS_FAIL.FAIL,
     },
     isPublished: { type: Boolean, default: false },
+    absenceCount: { type: Number, default: 0, min: 0 },
+    failReason: {
+      type: String,
+      default: null,
+    },
   },
   { timestamps: true }
 );

@@ -17,7 +17,8 @@ const {
   confirmStudentPromotion,
   handleFailedSemester,
 } = require('../services/semesterPromotionService');
-const { SEMESTER_RESULT } = require('../utils/academicRules');
+const { SEMESTER_RESULT, ATTENDANCE_TOTAL_DAYS, MAX_ABSENCES_BEFORE_FAIL } = require('../utils/academicRules');
+const { countStudentAbsences } = require('../services/attendanceService');
 
 const enrollInProgram = async (req, res) => {
   try {
@@ -108,12 +109,18 @@ const getStudentDashboard = async (req, res) => {
         semesterTitle: semester?.title,
         status: record.status,
         enrollmentDate: record.enrollmentDate,
-        courses: courses.map((c) => ({
-          id: c._id,
-          name: c.title,
-          code: c.code,
-          description: c.description,
-        })),
+        courses: enrollments.map((enrollment) => {
+          const course = courses.find((c) => c._id.toString() === enrollment.courseId);
+          if (!course) return null;
+          return {
+            id: course._id,
+            name: course.title,
+            code: course.code,
+            description: course.description,
+            isRepeat: enrollment.enrollmentType === 'repeat',
+            repeatFromSemester: enrollment.repeatFromSemester ?? null,
+          };
+        }).filter(Boolean),
         results: courseResults,
         semesterResult,
         registrationOpen: Boolean(nextReg),
@@ -307,27 +314,125 @@ const getSemesterHistory = async (req, res) => {
       return res.status(404).send({ success: false, message: 'No academic record found.' });
     }
 
-    const semesterResults = await semesterResultSchema.find({
-      studentId,
-      programId: record.programId,
-    }).sort({ semesterNumber: 1 });
+    const { programId, currentSemester } = record;
 
-    const courseResults = await courseResultSchema.find({
-      studentId,
-      programId: record.programId,
-      isPublished: true,
-    });
+    const [program, semesterDefs, semesterResults, allCourseResults, allEnrollments] =
+      await Promise.all([
+        programSchema.findById(programId),
+        semesterSchema.find({ programId }).sort({ semesterNumber: 1 }),
+        semesterResultSchema.find({ studentId, programId }),
+        courseResultSchema.find({ studentId, programId }),
+        registeredCourseSchema.find({ studentId, programId }),
+      ]);
 
-    const program = await programSchema.findById(record.programId);
+    const courseIds = [...new Set(allEnrollments.map((e) => e.courseId))];
+    const courses = await courseSchema.find({ _id: { $in: courseIds } });
+    const courseById = Object.fromEntries(courses.map((c) => [c._id.toString(), c]));
+
+    const semesters = [];
+    for (let sem = 1; sem <= currentSemester; sem += 1) {
+      const semDef = semesterDefs.find((s) => s.semesterNumber === sem);
+      const semResult = semesterResults.find((sr) => sr.semesterNumber === sem);
+      const isOngoing = sem === currentSemester;
+
+      const enrollments = allEnrollments.filter((e) => e.semesterNumber === sem);
+      const courseResultsForSem = allCourseResults.filter((cr) => cr.semesterNumber === sem);
+
+      const coursesData = [];
+      for (const enrollment of enrollments) {
+        const course = courseById[enrollment.courseId];
+        if (!course) continue;
+
+        const result = courseResultsForSem.find((r) => r.courseId === enrollment.courseId);
+        const liveAbsences = await countStudentAbsences(studentId, enrollment.courseId, sem);
+        const absenceCount = result?.absenceCount ?? liveAbsences;
+
+        if (!isOngoing && result && !result.isPublished) {
+          coursesData.push({
+            courseId: course._id.toString(),
+            name: course.title,
+            code: course.code,
+            isRepeat: enrollment.enrollmentType === 'repeat',
+            midExamMarks: null,
+            finalExamMarks: null,
+            totalMarks: null,
+            passFailStatus: null,
+            absenceCount,
+            failReason: null,
+            markStatus: 'Pending',
+          });
+          continue;
+        }
+
+        if (!result) {
+          coursesData.push({
+            courseId: course._id.toString(),
+            name: course.title,
+            code: course.code,
+            isRepeat: enrollment.enrollmentType === 'repeat',
+            midExamMarks: null,
+            finalExamMarks: null,
+            totalMarks: null,
+            passFailStatus: null,
+            absenceCount,
+            failReason: null,
+            markStatus: 'Pending',
+          });
+          continue;
+        }
+
+        coursesData.push({
+          courseId: course._id.toString(),
+          name: course.title,
+          code: course.code,
+          isRepeat: enrollment.enrollmentType === 'repeat',
+          midExamMarks: result.midExamMarks,
+          finalExamMarks: result.finalExamMarks,
+          totalMarks: result.totalMarks,
+          passFailStatus: result.passFailStatus,
+          absenceCount,
+          failReason: result.failReason ?? null,
+          markStatus: result.isPublished ? 'Published' : 'Unpublished',
+        });
+      }
+
+      coursesData.sort((a, b) => a.code.localeCompare(b.code));
+
+      let statusLabel = 'Ongoing';
+      if (!isOngoing) {
+        if (semResult?.isPublished) {
+          statusLabel = semResult.result;
+        } else {
+          statusLabel = 'Completed';
+        }
+      }
+
+      semesters.push({
+        semesterNumber: sem,
+        semesterTitle: semDef?.title ?? `Semester ${sem}`,
+        isOngoing,
+        statusLabel,
+        semesterResult: semResult,
+        courses: coursesData,
+      });
+    }
+
+    const ongoingSemester = semesters.find((s) => s.isOngoing) ?? null;
+    const historySemesters = semesters.filter((s) => !s.isOngoing);
 
     res.status(200).send({
       success: true,
       data: {
         program: program ? { id: program._id, name: program.name } : null,
-        currentSemester: record.currentSemester,
+        currentSemester,
         status: record.status,
-        semesterResults,
-        courseResults,
+        ongoingSemester,
+        historySemesters,
+        semesters,
+        attendanceRules: {
+          totalSessions: ATTENDANCE_TOTAL_DAYS,
+          maxAbsences: MAX_ABSENCES_BEFORE_FAIL,
+        },
       },
     });
   } catch (error) {
@@ -344,7 +449,7 @@ const retryFailedSemester = async (req, res) => {
     const assignment = await handleFailedSemester(studentId, programId, Number(semesterNumber));
     res.status(200).send({
       success: true,
-      message: 'Semester courses re-assigned for repeat.',
+      message: 'Failed courses re-assigned for repeat study.',
       assignment,
     });
   } catch (error) {

@@ -31,6 +31,11 @@ const attendanceSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    semesterNumber: {
+      type: Number,
+      min: 1,
+      max: 8,
+    },
   },
   { timestamps: true }
 );

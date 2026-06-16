@@ -25,7 +25,7 @@ export default function ProgramDetails() {
   const [savingProgram, setSavingProgram] = useState(false);
   const [savingSemester, setSavingSemester] = useState(false);
   const [courseForm, setCourseForm] = useState({
-    title: '', code: '', type: 'Core', fee: '', creditHours: '', description: '',
+    title: '', code: '', type: 'Core', creditHours: '', description: '',
   });
 
   useEffect(() => {
@@ -132,8 +132,8 @@ export default function ProgramDetails() {
       toast.error('Course title and code are required.', toastErrorObject);
       return;
     }
-    if (!courseForm.fee || !courseForm.creditHours) {
-      toast.error('Fee and credit hours are required.', toastErrorObject);
+    if (!courseForm.creditHours) {
+      toast.error('Credit hours are required.', toastErrorObject);
       return;
     }
     const adminId = adminData?._id || program?.adminId;
@@ -148,7 +148,6 @@ export default function ProgramDetails() {
         title: courseForm.title,
         code: courseForm.code,
         description: courseForm.description,
-        fee: Number(courseForm.fee),
         creditHours: Number(courseForm.creditHours),
         type: courseForm.type,
         adminId,
@@ -157,7 +156,7 @@ export default function ProgramDetails() {
         toast.error(res?.message ?? 'Could not add course', toastErrorObject);
         return;
       }
-      setCourseForm({ title: '', code: '', type: 'Core', fee: '', creditHours: '', description: '' });
+      setCourseForm({ title: '', code: '', type: 'Core', creditHours: '', description: '' });
       toast.success(res.message ?? 'Course added', toastSuccessObject);
       void fetchResponse(programEndpoints.getSemesterCourses(program._id, semesters.find((s) => s._id === selectedSemesterId)?.semesterNumber), 0, null)
         .then((semesterRes) => {
@@ -295,21 +294,13 @@ export default function ProgramDetails() {
               required
             />
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2">
             <InputField
               variant="auth"
               label="Credit hours"
               type="number"
               value={courseForm.creditHours}
               onChange={(event) => setCourseForm({ ...courseForm, creditHours: event.target.value })}
-            />
-            <InputField
-              variant="auth"
-              label="Fee"
-              type="number"
-              value={courseForm.fee}
-              onChange={(event) => setCourseForm({ ...courseForm, fee: event.target.value })}
-              required
             />
             <InputField
               variant="auth"
@@ -330,7 +321,7 @@ export default function ProgramDetails() {
 
           <DynamicTable
             variant="instructor"
-            headers={['Title', 'Code', 'Type', 'Credit Hours', 'Fee', 'Action']}
+            headers={['Title', 'Code', 'Type', 'Credit Hours', 'Action']}
             data={courses.map((course) => ({
               ...course,
               action: (
@@ -343,7 +334,7 @@ export default function ProgramDetails() {
                 </button>
               ),
             }))}
-            dataAttributes={['title', 'code', 'type', 'creditHours', 'fee', 'action']}
+            dataAttributes={['title', 'code', 'type', 'creditHours', 'action']}
           />
         </div>
       </ContentCard>
